@@ -3,16 +3,112 @@
 <head>
   <meta charset="UTF-8">
   <title>Ontario METAR Flight Conditions</title>
-  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; background: #f9fafb; }
+    h1 { color: #2c3e50; }
+    h2 { margin-top: 2rem; color: #34495e; }
+    #latest-table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    #latest-table th, #latest-table td {
+      border: 1px solid #ddd; padding: 8px; text-align: center;
+    }
+    #latest-table th { background: #2c3e50; color: white; }
+    .chart-container { width: 600px; margin-top: 2rem; }
+  </style>
 </head>
 <body>
-  <h1>Ontario METAR Flight Conditions Project</h1>
-  <p>This page hosts live-updating METAR data collected from 15 Ontario airports every 10 minutes.</p>
+  <h1>🌤️ Ontario METAR Flight Conditions Project</h1>
+  <p>Live-updating METAR data collected from 15 Ontario airports every 10 minutes.</p>
 
-  <h2>Download Data</h2>
-  <p><a href="saved_METARs.csv">Click here to download the latest dataset (CSV)</a></p>
+  <h2>📥 Download Data</h2>
+  <p><a href="saved_METARs.csv">Download latest dataset (CSV)</a></p>
 
-  <h2>Project Description</h2>
-  <p>Data is collected via the CheckWX API and processed into categories (LIFR, IFR, MVFR, VFR). Over time, this dataset will allow analysis of seasonal, regional, and climatological flight conditions across Ontario.</p>
+  <h2>📊 Latest Observations</h2>
+  <table id="latest-table">
+    <thead>
+      <tr>
+        <th>Airport</th>
+        <th>Observed (UTC)</th>
+        <th>Category</th>
+        <th>Temp (°C)</th>
+        <th>Dewpoint (°C)</th>
+        <th>Humidity (%)</th>
+        <th>Wind (°)</th>
+        <th>Wind (kts)</th>
+        <th>Visibility (m)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="chart-container">
+    <canvas id="categoryChart"></canvas>
+  </div>
+
+  <script>
+    Papa.parse("saved_METARs.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        const rows = results.data;
+        
+        // --- Show most recent observation for each airport ---
+        const latestByAirport = {};
+        rows.forEach(r => {
+          if (!r.icao) return;
+          if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
+            latestByAirport[r.icao] = r;
+          }
+        });
+
+        const tbody = document.querySelector("#latest-table tbody");
+        Object.values(latestByAirport).forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.icao}</td>
+            <td>${r.observed_utc}</td>
+            <td>${r.flight_category}</td>
+            <td>${r.temp_c}</td>
+            <td>${r.dewpoint_c}</td>
+            <td>${r.rh_percent}</td>
+            <td>${r.wind_dir_deg}</td>
+            <td>${r.wind_kts}</td>
+            <td>${r.vis_m}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // --- Flight category distribution chart ---
+        const categories = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
+        Object.values(latestByAirport).forEach(r => {
+          if (categories[r.flight_category] !== undefined) {
+            categories[r.flight_category]++;
+          }
+        });
+
+        new Chart(document.getElementById("categoryChart"), {
+          type: "bar",
+          data: {
+            labels: Object.keys(categories),
+            datasets: [{
+              label: "Number of Airports",
+              data: Object.values(categories),
+              backgroundColor: ["#8e44ad", "#e67e22", "#3498db", "#2ecc71"]
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: "Current Flight Category Distribution Across Ontario Airports"
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
