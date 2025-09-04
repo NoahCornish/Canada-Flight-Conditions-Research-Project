@@ -2,7 +2,7 @@ name: Fetch METARs
 
 on:
   schedule:
-    - cron: "5,35 * * * *"   # run at minute 05 and 35 UTC each hour
+    - cron: "5,35 * * * *"   # Run at minute 05 and 35 each hour (UTC)
   workflow_dispatch:
 
 permissions:
@@ -16,22 +16,22 @@ jobs:
   run-r:
     runs-on: ubuntu-latest
 
-    # Use a container that already has R installed -> no apt spam, much faster
+    # Use an image that already has R installed (much faster than apt/setup-r)
     container:
       image: rocker/r-ver:4.5.1
 
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
-      # Put user library in a predictable place so we can cache it
+      # Use a fixed user library path so caches are hit reliably
       R_LIBS_USER: /home/runner/R/4.5
-      # pak cache (binary/tarball cache)
+      # pak's download/build cache
       PAK_CACHE_DIR: /home/runner/.cache/R/pak
 
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      # Cache the pak download cache
+      # Cache the pak cache (tarballs/binaries) to speed up installs
       - name: Cache pak cache
         uses: actions/cache@v4
         with:
@@ -49,6 +49,7 @@ jobs:
         run: |
           dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
           install.packages("pak", repos = "https://r-lib.github.io/p/pak/dev/")
+        shell: Rscript {0}
 
       - name: Install R packages (fast, uses cache)
         run: |
