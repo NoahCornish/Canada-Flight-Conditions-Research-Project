@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ontario METAR Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS/JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- PapaParse for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
+
+    /* Legend */
+    .legend {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      background: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .legend span { display: flex; align-items: center; margin-bottom: 4px; }
+    .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+    }
+    .dot-vfr { background: #2ecc71; }
+    .dot-mvfr { background: #3498db; }
+    .dot-ifr { background: #e74c3c; }
+    .dot-lifr { background: #8e44ad; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="legend">
+    <span><span class="dot dot-vfr"></span> VFR</span>
+    <span><span class="dot dot-mvfr"></span> MVFR</span>
+    <span><span class="dot dot-ifr"></span> IFR</span>
+    <span><span class="dot dot-lifr"></span> LIFR</span>
+  </div>
+
+  <script>
+    // Airport coordinates
+    const airports = {
+      CYMO: [51.291, -80.607],  // Moosonee
+      CYYB: [46.363, -79.422],  // North Bay
+      CYOO: [43.922, -78.895],  // Oshawa
+      CYOW: [45.322, -75.669],  // Ottawa
+      CYQG: [42.275, -82.955],  // Windsor
+      CYTS: [48.569, -81.377],  // Timmins
+      CYSB: [46.625, -80.798],  // Sudbury
+      CYGK: [44.225, -76.596],  // Kingston
+      CYXU: [43.033, -81.151],  // London
+      CYHM: [43.163, -79.934],  // Hamilton
+      CYYZ: [43.677, -79.624],  // Toronto Pearson
+      CYTZ: [43.627, -79.396],  // Toronto Billy Bishop
+      CYQA: [44.974, -79.303],  // Muskoka
+      CYPL: [51.446, -90.214],  // Pickle Lake
+      CYQT: [48.371, -89.324]   // Thunder Bay
+    };
+
+    // Colors for flight categories
+    function categoryColor(cat) {
+      switch(cat) {
+        case "VFR": return "#2ecc71";
+        case "MVFR": return "#3498db";
+        case "IFR": return "#e74c3c";
+        case "LIFR": return "#8e44ad";
+        default: return "#7f8c8d";
+      }
+    }
+
+    // Initialize map
+    const map = L.map('map').setView([47.5, -82.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Load CSV and plot markers
+    Papa.parse("saved_METARs.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        const rows = results.data;
+        const latestByAirport = {};
+
+        rows.forEach(r => {
+          if (!r.icao) return;
+          if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
+            latestByAirport[r.icao] = r;
+          }
+        });
+
+        Object.entries(latestByAirport).forEach(([icao, r]) => {
+          if (!airports[icao]) return;
+          const [lat, lon] = airports[icao];
+          const color = categoryColor(r.flight_category);
+
+          const marker = L.circleMarker([lat, lon], {
+            radius: 8,
+            fillColor: color,
+            color: "#333",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).addTo(map);
+
+          marker.bindPopup(`
+            <strong>${icao}</strong><br>
+            Category: <span style="color:${color}; font-weight:bold">${r.flight_category}</span><br>
+            Temp: ${r.temp_c}°C<br>
+            Wind: ${r.wind_dir_deg}° @ ${r.wind_kts} kts<br>
+            Obs: ${r.observed_utc}
+          `);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
