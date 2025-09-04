@@ -9,13 +9,75 @@
     body { font-family: Arial, sans-serif; margin: 2rem; background: #f9fafb; }
     h1 { color: #2c3e50; }
     h2 { margin-top: 2rem; color: #34495e; }
-    #latest-table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    #latest-table th, #latest-table td {
-      border: 1px solid #ddd; padding: 8px; text-align: center;
+    .chart-container { width: 95%; max-width: 900px; margin: 2rem 0; }
+
+    /* Grid layout for airport cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
     }
-    #latest-table th { background: #2c3e50; color: white; cursor: pointer; }
-    .chart-container { width: 95%; max-width: 900px; margin-top: 2rem; }
-    #searchBox { padding: 6px; margin-top: 10px; width: 200px; }
+
+    /* Card style */
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .icao {
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    .category {
+      font-size: 0.9rem;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    .cat-VFR  { background: #2ecc71; }
+    .cat-MVFR { background: #3498db; }
+    .cat-IFR  { background: #e67e22; }
+    .cat-LIFR { background: #8e44ad; }
+
+    .obs-time {
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 0.5rem;
+    }
+
+    .temp {
+      font-size: 1.2rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .humidity {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .wind {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+
+    .arrow {
+      display: inline-block;
+      transform-origin: center;
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 <body>
@@ -25,24 +87,8 @@
   <h2>📥 Download Data</h2>
   <p><a href="saved_METARs.csv">Download latest dataset (CSV)</a></p>
 
-  <h2>📊 Latest Observations</h2>
-  <label for="searchBox">Filter by Airport (ICAO): </label>
-  <input type="text" id="searchBox" placeholder="e.g. CYMO">
-
-  <table id="latest-table">
-    <thead>
-      <tr>
-        <th onclick="sortTable(0)">Airport ⬍</th>
-        <th onclick="sortTable(1)">Observed (EDT) ⬍</th>
-        <th onclick="sortTable(2)">Category ⬍</th>
-        <th onclick="sortTable(3)">Temp (°C) ⬍</th>
-        <th onclick="sortTable(4)">Humidity (%) ⬍</th>
-        <th onclick="sortTable(5)">Wind Dir (°) ⬍</th>
-        <th onclick="sortTable(6)">Wind (kts) ⬍</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h2>📊 Live Conditions (Latest)</h2>
+  <div class="grid" id="airportGrid"></div>
 
   <div class="chart-container">
     <canvas id="categoryChart"></canvas>
@@ -56,53 +102,17 @@
     // Convert UTC string to EDT (UTC-4)
     function toEDT(utcString) {
       if (!utcString) return "";
-      const date = new Date(utcString + "Z"); // force UTC
-      date.setHours(date.getHours() - 4); // shift to EDT
+      const date = new Date(utcString + "Z");
+      date.setHours(date.getHours() - 4);
       return date.toISOString().replace("T", " ").substring(0,16);
     }
 
-    // Sort table columns
-    function sortTable(colIndex) {
-      const table = document.getElementById("latest-table");
-      let switching = true, dir = "asc";
-      while (switching) {
-        switching = false;
-        const rows = table.rows;
-        for (let i = 1; i < rows.length - 1; i++) {
-          let shouldSwitch = false;
-          const x = rows[i].getElementsByTagName("TD")[colIndex];
-          const y = rows[i+1].getElementsByTagName("TD")[colIndex];
-          if (dir === "asc" && x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-            shouldSwitch = true;
-          } else if (dir === "desc" && x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-            shouldSwitch = true;
-          }
-          if (shouldSwitch) {
-            rows[i].parentNode.insertBefore(rows[i+1], rows[i]);
-            switching = true;
-            break;
-          }
-        }
-        if (!switching && dir === "asc") { dir = "desc"; switching = true; }
-      }
+    // Rotate arrow for wind direction
+    function windArrow(deg) {
+      if (!deg) return "";
+      return `<span class="arrow" style="transform: rotate(${deg}deg)">⬆</span>`;
     }
 
-    // Filter table by ICAO
-    document.addEventListener("input", function(e) {
-      if (e.target.id === "searchBox") {
-        const filter = e.target.value.toUpperCase();
-        const table = document.getElementById("latest-table");
-        const trs = table.getElementsByTagName("tr");
-        for (let i = 1; i < trs.length; i++) {
-          const td = trs[i].getElementsByTagName("td")[0]; // Airport column
-          if (td) {
-            trs[i].style.display = td.textContent.toUpperCase().includes(filter) ? "" : "none";
-          }
-        }
-      }
-    });
-
-    // --- Load data and render ---
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
@@ -118,27 +128,29 @@
           }
         });
 
-        const tbody = document.querySelector("#latest-table tbody");
+        // --- Airport cards ---
+        const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${r.icao}</td>
-            <td>${toEDT(r.observed_utc)}</td>
-            <td>${r.flight_category}</td>
-            <td>${r.temp_c}</td>
-            <td>${r.rh_percent}</td>
-            <td>${r.wind_dir_deg}</td>
-            <td>${r.wind_kts}</td>
+          const div = document.createElement("div");
+          div.className = "card";
+
+          div.innerHTML = `
+            <div class="icao">${r.icao}</div>
+            <div class="category cat-${r.flight_category}">${r.flight_category}</div>
+            <div class="obs-time">${toEDT(r.observed_utc)}</div>
+            <div class="temp">${r.temp_c}°C</div>
+            <div class="humidity">Humidity: ${r.rh_percent}%</div>
+            <div class="wind">
+              ${windArrow(r.wind_dir_deg)} ${r.wind_kts} kts
+            </div>
           `;
-          tbody.appendChild(tr);
+          grid.appendChild(div);
         });
 
         // --- Current category distribution ---
         const categories = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
         Object.values(latestByAirport).forEach(r => {
-          if (categories[r.flight_category] !== undefined) {
-            categories[r.flight_category]++;
-          }
+          if (categories[r.flight_category] !== undefined) categories[r.flight_category]++;
         });
 
         new Chart(document.getElementById("categoryChart"), {
@@ -161,7 +173,7 @@
         const grouped = {};
         rows.forEach(r => {
           if (!r.observed_utc || !r.flight_category) return;
-          const t = r.observed_utc.substring(0,16); // minute precision
+          const t = r.observed_utc.substring(0,16);
           if (!grouped[t]) grouped[t] = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
           if (grouped[t][r.flight_category] !== undefined) grouped[t][r.flight_category]++;
         });
