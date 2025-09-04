@@ -2,7 +2,7 @@ name: Fetch METARs
 
 on:
   schedule:
-    - cron: "5,35 * * * *"   # Run at 05 and 35 minutes past the hour (UTC)
+    - cron: "*/10 * * * *"   # Run every 10 minutes (0000 - 0010, etc...)
   workflow_dispatch:
 
 permissions:
