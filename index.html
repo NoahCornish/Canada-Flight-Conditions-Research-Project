@@ -30,35 +30,74 @@
       align-items: center;
       text-align: center;
       font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.1s;
     }
+    .card:hover { transform: scale(1.03); }
 
-    .icao {
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
-    .obs-time {
-      font-size: 0.7rem;
-      opacity: 0.9;
-      margin: 2px 0 6px 0;
-    }
-    .temp {
-      font-size: 1.1rem;
-      margin-bottom: 2px;
-    }
+    .icao { font-size: 1.2rem; font-weight: bold; }
+    .obs-time { font-size: 0.7rem; opacity: 0.9; margin: 2px 0 6px 0; }
+    .temp { font-size: 1.1rem; margin-bottom: 2px; }
     .humidity, .wind { font-size: 0.8rem; margin: 1px 0; }
     .arrow { display: inline-block; transform-origin: center; font-size: 1rem; }
 
     /* Category colors */
-    .cat-VFR  { background: #2ecc71; }
-    .cat-MVFR { background: #3498db; }
-    .cat-IFR  { background: #e67e22; }
-    .cat-LIFR { background: #8e44ad; }
+    .cat-VFR  { background: #2ecc71; }  /* green */
+    .cat-MVFR { background: #3498db; }  /* blue */
+    .cat-IFR  { background: #e74c3c; }  /* red */
+    .cat-LIFR { background: #8e44ad; }  /* purple */
 
     /* Compact for iPhones */
     @media (max-width: 500px) {
       h1 { font-size: 1.2rem; }
       h2 { font-size: 1rem; }
       .grid { grid-template-columns: 1fr; }
+    }
+
+    /* Popup modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+      text-align: center;
+    }
+    .modal h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #2c3e50;
+    }
+    .close-btn {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #888;
+      cursor: pointer;
+    }
+    .close-btn:hover { color: #000; }
+    .raw-text {
+      margin-top: 0.75rem;
+      padding: 0.5rem;
+      background: #f0f0f0;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      text-align: left;
     }
   </style>
 </head>
@@ -71,6 +110,15 @@
 
   <h2>📊 Live Conditions</h2>
   <div class="grid" id="airportGrid"></div>
+
+  <!-- Popup modal -->
+  <div id="metarModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">✖</span>
+      <h3 id="modalTitle"></h3>
+      <div class="raw-text" id="modalRaw"></div>
+    </div>
+  </div>
 
   <script>
     // Convert UTC string to EDT (UTC-4)
@@ -86,6 +134,35 @@
       if (!deg) return "";
       return `<span class="arrow" style="transform: rotate(${deg}deg)">⬆</span>`;
     }
+
+    // Modal controls
+    function showModal(title, raw) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalRaw").textContent = raw;
+      document.getElementById("metarModal").style.display = "flex";
+    }
+    function closeModal() {
+      document.getElementById("metarModal").style.display = "none";
+    }
+
+    // Map ICAO to Airport Name (add more as needed)
+    const airportNames = {
+      CYMO: "Moosonee Airport",
+      CYYB: "North Bay Jack Garland Airport",
+      CYOO: "Oshawa Executive Airport",
+      CYOW: "Ottawa Macdonald–Cartier Int’l",
+      CYQG: "Windsor Int’l Airport",
+      CYTS: "Timmins Victor M. Power Airport",
+      CYSB: "Sudbury Airport",
+      CYGK: "Kingston Airport",
+      CYXU: "London Int’l Airport",
+      CYHM: "Hamilton Int’l Airport",
+      CYYZ: "Toronto Pearson Int’l",
+      CYTZ: "Billy Bishop Toronto City",
+      CYQA: "Muskoka Airport",
+      CYPL: "Pickle Lake Airport",
+      CYQT: "Thunder Bay Int’l Airport"
+    };
 
     Papa.parse("saved_METARs.csv", {
       download: true,
@@ -112,6 +189,10 @@
             <div class="humidity">Humidity: ${r.rh_percent}%</div>
             <div class="wind">${windArrow(r.wind_dir_deg)} ${r.wind_kts} kts</div>
           `;
+          div.addEventListener("click", () => {
+            const name = airportNames[r.icao] || "Unknown Airport";
+            showModal(`${r.icao} – ${name}`, r.raw_text || "No raw METAR available");
+          });
           grid.appendChild(div);
         });
       }
