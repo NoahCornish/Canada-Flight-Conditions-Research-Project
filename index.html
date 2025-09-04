@@ -97,15 +97,15 @@
     .cat-LIFR { background: #8e44ad; }
 
     /* Wind compass */
-    .wind { font-size: 0.8rem; margin-top: 4px; }
+    .wind { font-size: 0.8rem; margin-top: 6px; }
     .wind-compass {
       position: relative;
-      width: 50px;
-      height: 50px;
-      margin: 0 auto 4px auto;
-      border: 1px solid #bbb;
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 6px auto;
+      border: 2px solid #bbb;
       border-radius: 50%;
-      font-size: 0.55rem;
+      font-size: 0.65rem;
       color: #555;
     }
     .wind-compass .label {
@@ -119,9 +119,9 @@
 
     .wind-arrow {
       width: 0; height: 0;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-bottom: 14px solid #2c3e50;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 22px solid;
       position: absolute;
       left: 50%; top: 50%;
       transform-origin: center bottom;
@@ -239,6 +239,14 @@
       date.setHours(date.getHours() - 4);
       return date.toISOString().replace("T", " ").substring(0,16);
     }
+
+    function windColor(speed) {
+      if (speed <= 10) return "#2ecc71"; // green
+      if (speed <= 20) return "#f1c40f"; // yellow
+      if (speed <= 30) return "#e67e22"; // orange
+      return "#e74c3c"; // red
+    }
+
     function showModal(title, raw) {
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalRaw").textContent = raw;
@@ -277,7 +285,6 @@
           }
         });
 
-        // Last updated
         if (latestTime) {
           document.getElementById("lastUpdated").textContent =
             "Last Updated: " + toEDT(latestTime) + " EDT";
@@ -285,6 +292,8 @@
 
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
+          const speed = parseInt(r.wind_kts) || 0;
+          const deg = parseInt(r.wind_dir_deg) || 0;
           const div = document.createElement("div");
           div.className = "card";
           div.innerHTML = `
@@ -299,9 +308,9 @@
                 <div class="label S">S</div>
                 <div class="label E">E</div>
                 <div class="label W">W</div>
-                <div class="wind-arrow" style="transform: rotate(${r.wind_dir_deg}deg)"></div>
+                <div class="wind-arrow" style="transform: rotate(${deg}deg); border-bottom-color:${windColor(speed)}"></div>
               </div>
-              ${r.wind_kts} kts
+              ${deg}° @ ${speed} kts
             </div>
           `;
           div.addEventListener("click", () => {
