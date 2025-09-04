@@ -1,35 +1,59 @@
-name: Fetch METARs every 30 minutes
+name: Fetch METARs
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
-  workflow_dispatch:         # allow manual runs
+    - cron: "5,35 * * * *"   # run at minute 05 and 35 UTC each hour
+  workflow_dispatch:
 
 permissions:
-  contents: write            # needed to push the CSV
+  contents: write
+
+concurrency:
+  group: metar-scheduler
+  cancel-in-progress: true
 
 jobs:
   run-r:
     runs-on: ubuntu-latest
+
+    # Use a container that already has R installed -> no apt spam, much faster
+    container:
+      image: rocker/r-ver:4.5.1
+
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
+      # Put user library in a predictable place so we can cache it
+      R_LIBS_USER: /home/runner/R/4.5
+      # pak cache (binary/tarball cache)
+      PAK_CACHE_DIR: /home/runner/.cache/R/pak
 
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-
-      - name: Install deps
-        uses: r-lib/actions/setup-r-dependencies@v2
+      # Cache the pak download cache
+      - name: Cache pak cache
+        uses: actions/cache@v4
         with:
-          packages: |
-            httr
-            jsonlite
-            tibble
-            dplyr
-            lubridate
+          path: ${{ env.PAK_CACHE_DIR }}
+          key: pak-${{ runner.os }}-4.5.1
+
+      # Cache the installed R library
+      - name: Cache R library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: rlib-${{ runner.os }}-4.5.1-httr-jsonlite-tibble-dplyr-lubridate
+
+      - name: Install pak
+        run: |
+          dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
+          install.packages("pak", repos = "https://r-lib.github.io/p/pak/dev/")
+
+      - name: Install R packages (fast, uses cache)
+        run: |
+          pak::pkg_install(c("httr","jsonlite","tibble","dplyr","lubridate"))
+        shell: Rscript {0}
 
       - name: Run script
         run: Rscript metar_fetch.R
