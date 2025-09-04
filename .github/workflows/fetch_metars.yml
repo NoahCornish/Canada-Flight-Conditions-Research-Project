@@ -3,11 +3,11 @@ name: 🌤️ Fetch METARs (Every 10 Minutes)
 on:
   schedule:
     - cron: "*/10 * * * *"   # Run every 10 minutes (UTC)
-  workflow_dispatch:          # Allow manual trigger
+  workflow_dispatch:          # Allow manual trigger from the GitHub UI
 
 permissions:
-  contents: write
-  issues: write               # Needed for notifications
+  contents: write             # allow pushing to repo
+  issues: write               # allow posting notifications as issue comments
 
 concurrency:
   group: metar-scheduler
@@ -18,10 +18,10 @@ jobs:
     name: 📡 Fetch and Save METARs
     runs-on: ubuntu-latest
     container:
-      image: rocker/r-ver:4.3.3   # Lightweight R image with R preinstalled
+      image: rocker/tidyverse:4.3.3   # R + Git + tidyverse preinstalled
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
-      MENTION_USER: "NoahCornish"           # Customize to who should be notified
+      MENTION_USER: "NoahCornish"           # change to whoever you want notified
       NOTIFY_ISSUE_TITLE: "📣 METAR Run Notifications"
 
     steps:
@@ -29,10 +29,10 @@ jobs:
       - name: 🛎️ Step 1 – Check out the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1   # Only latest commit for speed
+          fetch-depth: 1   # only last commit for speed
 
       # ------------------------------------------------------------
-      - name: 📦 Step 2 – Ensure required R package is installed
+      - name: 📦 Step 2 – Ensure required R package (jsonlite) is installed
         run: |
           Rscript -e 'if(!"jsonlite" %in% rownames(installed.packages())) {
                         install.packages("jsonlite", repos="https://cloud.r-project.org", quiet=TRUE)
@@ -43,11 +43,6 @@ jobs:
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
-        - name: 🛠️ Step 3.5 – Install git inside container
-        run: |
-          apt-get update -qq
-          apt-get install -y git
-
       - name: 💾 Step 4 – Commit and push updated CSV (if changed)
         run: |
           git config user.name "github-actions[bot]"
@@ -59,7 +54,6 @@ jobs:
           else
             echo "No changes to commit."
           fi
-
 
       # ------------------------------------------------------------
       - name: ⏱️ Step 5 – Capture current timestamp (UTC)
@@ -78,7 +72,7 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // Look for an existing open issue with this title
+            // Look for existing issue with the notification title
             const { data: issues } = await github.rest.issues.listForRepo({
               owner, repo, state: "open", per_page: 100
             });
