@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <title>Ontario METAR Flight Conditions</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile scaling -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
-    /* General page styling */
     body {
       font-family: 'Inter', Arial, sans-serif;
       margin: 0;
@@ -27,22 +26,10 @@
       top: 0;
       z-index: 100;
     }
-    header h1 {
-      margin: 0;
-      font-size: 1.6rem;
-    }
-    header p {
-      margin: 0.25rem 0 0;
-      font-size: 0.9rem;
-      opacity: 0.9;
-    }
+    header h1 { margin: 0; font-size: 1.6rem; }
+    header p { margin: 0.25rem 0 0; font-size: 0.9rem; opacity: 0.9; }
 
-    main {
-      max-width: 1000px;
-      margin: auto;
-      padding: 1.5rem;
-    }
-
+    main { max-width: 1000px; margin: auto; padding: 1.5rem; }
     h2 {
       margin-top: 1.5rem;
       color: #34495e;
@@ -59,23 +46,14 @@
       margin: 0.5rem 0 1rem 0;
       font-size: 0.9rem;
     }
-    .legend span {
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .legend span { display: flex; align-items: center; gap: 0.3rem; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     .dot-vfr { background: #2ecc71; }
     .dot-mvfr { background: #3498db; }
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
 
-    /* Grid layout for airport cards */
+    /* Grid layout */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -102,7 +80,7 @@
     .icao { font-size: 1.2rem; font-weight: 600; }
     .obs-time { font-size: 0.7rem; color: #555; margin: 2px 0 6px 0; }
     .temp { font-size: 1.1rem; margin-bottom: 2px; font-weight: 500; }
-    .humidity, .wind { font-size: 0.8rem; margin: 1px 0; color: #444; }
+    .humidity { font-size: 0.8rem; margin: 1px 0; color: #444; }
 
     /* Category badge */
     .category {
@@ -118,16 +96,35 @@
     .cat-IFR  { background: #e74c3c; }
     .cat-LIFR { background: #8e44ad; }
 
-    /* CSS Wind arrow */
+    /* Wind compass */
+    .wind { font-size: 0.8rem; margin-top: 4px; }
+    .wind-compass {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 4px auto;
+      border: 1px solid #bbb;
+      border-radius: 50%;
+      font-size: 0.55rem;
+      color: #555;
+    }
+    .wind-compass .label {
+      position: absolute;
+      font-weight: bold;
+    }
+    .wind-compass .N { top: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .S { bottom: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .E { right: 2px; top: 50%; transform: translateY(-50%); }
+    .wind-compass .W { left: 2px; top: 50%; transform: translateY(-50%); }
+
     .wind-arrow {
-      width: 0; 
-      height: 0; 
+      width: 0; height: 0;
       border-left: 6px solid transparent;
       border-right: 6px solid transparent;
-      border-bottom: 12px solid #2c3e50;
-      margin-right: 4px;
-      display: inline-block;
-      transform-origin: center;
+      border-bottom: 14px solid #2c3e50;
+      position: absolute;
+      left: 50%; top: 50%;
+      transform-origin: center bottom;
     }
 
     /* Compact for iPhones */
@@ -138,11 +135,8 @@
       .grid { grid-template-columns: 1fr; }
     }
 
-    /* Download section */
-    .download {
-      margin-top: 2rem;
-      text-align: center;
-    }
+    /* Download */
+    .download { margin-top: 2rem; text-align: center; }
     .download a {
       display: inline-block;
       background: #3498db;
@@ -155,7 +149,7 @@
     }
     .download a:hover { background: #2c80b4; }
 
-    /* Modal styling */
+    /* Modal */
     .modal {
       display: none;
       position: fixed;
@@ -175,15 +169,10 @@
       position: relative;
       text-align: center;
     }
-    .modal h3 {
-      margin-top: 0;
-      font-size: 1.2rem;
-      color: #2c3e50;
-    }
+    .modal h3 { margin-top: 0; font-size: 1.2rem; color: #2c3e50; }
     .close-btn {
       position: absolute;
-      top: 8px;
-      right: 12px;
+      top: 8px; right: 12px;
       font-size: 1.2rem;
       font-weight: bold;
       color: #e74c3c;
@@ -201,7 +190,7 @@
       text-align: left;
     }
 
-    /* Last updated banner */
+    /* Last updated */
     .last-updated {
       text-align: center;
       font-size: 0.85rem;
@@ -250,7 +239,6 @@
       date.setHours(date.getHours() - 4);
       return date.toISOString().replace("T", " ").substring(0,16);
     }
-
     function showModal(title, raw) {
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalRaw").textContent = raw;
@@ -289,7 +277,7 @@
           }
         });
 
-        // Show last updated
+        // Last updated
         if (latestTime) {
           document.getElementById("lastUpdated").textContent =
             "Last Updated: " + toEDT(latestTime) + " EDT";
@@ -305,7 +293,16 @@
             <div class="obs-time">${toEDT(r.observed_utc)}</div>
             <div class="temp">${r.temp_c}°C</div>
             <div class="humidity">💧 ${r.rh_percent}%</div>
-            <div class="wind"><span class="wind-arrow" style="transform: rotate(${r.wind_dir_deg}deg)"></span> ${r.wind_kts} kts</div>
+            <div class="wind">
+              <div class="wind-compass">
+                <div class="label N">N</div>
+                <div class="label S">S</div>
+                <div class="label E">E</div>
+                <div class="label W">W</div>
+                <div class="wind-arrow" style="transform: rotate(${r.wind_dir_deg}deg)"></div>
+              </div>
+              ${r.wind_kts} kts
+            </div>
           `;
           div.addEventListener("click", () => {
             const name = airportNames[r.icao] || "Unknown Airport";
