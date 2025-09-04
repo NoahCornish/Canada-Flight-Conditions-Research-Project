@@ -6,14 +6,45 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile scaling -->
   <style>
+    /* General page styling */
     body {
-      font-family: Arial, sans-serif;
-      margin: 1rem;
-      background: #f9fafb;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+      color: #2c3e50;
     }
-    h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 0.5rem; }
-    h2 { margin-top: 1.5rem; color: #34495e; font-size: 1.2rem; }
 
+    header {
+      background: linear-gradient(135deg, #3498db, #2ecc71);
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+    header p {
+      margin: 0.25rem 0 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: auto;
+      padding: 1.5rem;
+    }
+
+    h2 {
+      margin-top: 1.5rem;
+      color: #34495e;
+      font-size: 1.3rem;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 0.25rem;
+    }
+
+    /* Grid layout for airport cards */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -21,7 +52,7 @@
       margin-top: 1rem;
     }
 
-    /* Original card style */
+    /* Card style (unchanged) */
     .card {
       background: white;
       border-radius: 10px;
@@ -43,7 +74,7 @@
     .humidity, .wind { font-size: 0.8rem; margin: 1px 0; }
     .arrow { display: inline-block; transform-origin: center; font-size: 1rem; }
 
-    /* Category badge inside cards */
+    /* Category badge */
     .category {
       font-size: 0.8rem;
       font-weight: bold;
@@ -59,12 +90,30 @@
 
     /* Compact for iPhones */
     @media (max-width: 500px) {
-      h1 { font-size: 1.2rem; }
-      h2 { font-size: 1rem; }
+      header h1 { font-size: 1.3rem; }
+      header p { font-size: 0.8rem; }
+      h2 { font-size: 1.1rem; }
       .grid { grid-template-columns: 1fr; }
     }
 
-    /* Popup modal */
+    /* Download section */
+    .download {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    .download a {
+      display: inline-block;
+      background: #3498db;
+      color: white;
+      text-decoration: none;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .download a:hover { background: #2c80b4; }
+
+    /* Modal styling */
     .modal {
       display: none;
       position: fixed;
@@ -112,14 +161,20 @@
   </style>
 </head>
 <body>
-  <h1>🌤️ Ontario METAR Flight Conditions</h1>
-  <p style="font-size:0.9rem">Live METAR updates from 15 Ontario airports every 10 minutes.</p>
+  <header>
+    <h1>🌤️ Ontario METAR Flight Conditions</h1>
+    <p>Live updates every 10 minutes from 15 Ontario airports</p>
+  </header>
 
-  <h2>📥 Download Data</h2>
-  <p><a href="saved_METARs.csv">Download latest dataset (CSV)</a></p>
+  <main>
+    <h2>📊 Live Conditions</h2>
+    <div class="grid" id="airportGrid"></div>
 
-  <h2>📊 Live Conditions</h2>
-  <div class="grid" id="airportGrid"></div>
+    <div class="download">
+      <h2>📥 Download Data</h2>
+      <a href="saved_METARs.csv">Download latest dataset (CSV)</a>
+    </div>
+  </main>
 
   <!-- Popup modal -->
   <div id="metarModal" class="modal">
@@ -131,21 +186,16 @@
   </div>
 
   <script>
-    // Convert UTC string to EDT (UTC-4)
     function toEDT(utcString) {
       if (!utcString) return "";
       const date = new Date(utcString + "Z");
       date.setHours(date.getHours() - 4);
       return date.toISOString().replace("T", " ").substring(0,16);
     }
-
-    // Rotate arrow for wind direction
     function windArrow(deg) {
       if (!deg) return "";
       return `<span class="arrow" style="transform: rotate(${deg}deg)">⬆</span>`;
     }
-
-    // Modal controls
     function showModal(title, raw) {
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalRaw").textContent = raw;
@@ -154,40 +204,28 @@
     function closeModal() {
       document.getElementById("metarModal").style.display = "none";
     }
-
-    // Map ICAO to Airport Name (add more as needed)
     const airportNames = {
-      CYMO: "Moosonee Airport",
-      CYYB: "North Bay Jack Garland Airport",
-      CYOO: "Oshawa Executive Airport",
-      CYOW: "Ottawa Macdonald–Cartier Int’l",
-      CYQG: "Windsor Int’l Airport",
-      CYTS: "Timmins Victor M. Power Airport",
-      CYSB: "Sudbury Airport",
-      CYGK: "Kingston Airport",
-      CYXU: "London Int’l Airport",
-      CYHM: "Hamilton Int’l Airport",
-      CYYZ: "Toronto Pearson Int’l",
-      CYTZ: "Billy Bishop Toronto City",
-      CYQA: "Muskoka Airport",
-      CYPL: "Pickle Lake Airport",
+      CYMO: "Moosonee Airport", CYYB: "North Bay Jack Garland Airport",
+      CYOO: "Oshawa Executive Airport", CYOW: "Ottawa Macdonald–Cartier Int’l",
+      CYQG: "Windsor Int’l Airport", CYTS: "Timmins Victor M. Power Airport",
+      CYSB: "Sudbury Airport", CYGK: "Kingston Airport",
+      CYXU: "London Int’l Airport", CYHM: "Hamilton Int’l Airport",
+      CYYZ: "Toronto Pearson Int’l", CYTZ: "Billy Bishop Toronto City",
+      CYQA: "Muskoka Airport", CYPL: "Pickle Lake Airport",
       CYQT: "Thunder Bay Int’l Airport"
     };
-
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
       complete: function(results) {
         const rows = results.data;
         const latestByAirport = {};
-
         rows.forEach(r => {
           if (!r.icao) return;
           if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
             latestByAirport[r.icao] = r;
           }
         });
-
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
           const div = document.createElement("div");
