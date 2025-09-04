@@ -129,6 +129,27 @@
   transform-origin: center center; /* rotate from the center */
   transform: translate(-50%, -50%);
 }
+    .wind-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.wind-legend .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-calm { background: #2ecc71; }   /* green */
+.dot-moderate { background: #f1c40f; } /* yellow */
+.dot-strong { background: #e67e22; }   /* orange */
+.dot-severe { background: #e74c3c; }   /* red */
+
 
 
     /* Compact for iPhones */
@@ -218,6 +239,14 @@
       <span><span class="dot dot-ifr"></span> IFR</span>
       <span><span class="dot dot-lifr"></span> LIFR</span>
     </div>
+
+    <div class="legend wind-legend">
+  <span><span class="dot dot-calm"></span> 0–10 kts (Calm/Light)</span>
+  <span><span class="dot dot-moderate"></span> 11–20 kts (Moderate)</span>
+  <span><span class="dot dot-strong"></span> 21–30 kts (Strong)</span>
+  <span><span class="dot dot-severe"></span> 31+ kts (Severe)</span>
+</div>
+
 
     <div class="grid" id="airportGrid"></div>
 
