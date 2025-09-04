@@ -43,6 +43,11 @@ jobs:
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
+        - name: 🛠️ Step 3.5 – Install git inside container
+        run: |
+          apt-get update -qq
+          apt-get install -y git
+
       - name: 💾 Step 4 – Commit and push updated CSV (if changed)
         run: |
           git config user.name "github-actions[bot]"
@@ -54,6 +59,7 @@ jobs:
           else
             echo "No changes to commit."
           fi
+
 
       # ------------------------------------------------------------
       - name: ⏱️ Step 5 – Capture current timestamp (UTC)
