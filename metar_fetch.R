@@ -7,7 +7,39 @@
 # ------------------------------------------------------------------------------
 
 # ----------------------- User settings ----------------------
-STATIONS     <- c("CYMO", "CYYB", "CYOO", "CYOW", "CYQG")
+# Ontario Airports Selected for Maximum Geographic Spread (15 total)
+# Covers: Far North, Northwest, Northeast, Eastern Ontario, GTA, Central Ontario, and Southwest
+STATIONS <- c(
+  # --- Far North / James Bay ---
+  "CYMO", # Moosonee – access point for James Bay communities, important for northern climatology
+  "CYPL", # Pickle Lake – gateway airport for remote northern Ontario (many flights to First Nations)
+
+  # --- Northeast Corridor ---
+  "CYTS", # Timmins – key hub in Northeastern Ontario mining and forestry region
+  "CYSB", # Sudbury – largest city in Northern Ontario, significant aviation hub
+  "CYYB", # North Bay – transitional airport between northern and southern Ontario
+
+  # --- Northwest Ontario ---
+  "CYQT", # Thunder Bay – primary hub for Northwestern Ontario, regional airline operations
+
+  # --- Eastern Ontario ---
+  "CYOW", # Ottawa – major international airport, Eastern Ontario reference point
+  "CYGK", # Kingston – smaller but strategically important, captures Lake Ontario east-end conditions
+
+  # --- Southwest Ontario ---
+  "CYQG", # Windsor – major border city, lake-effect weather influences
+  "CYXU", # London – large regional airport, southwestern Ontario climate representation
+  "CYHM", # Hamilton – southern Ontario cargo hub, lake influence
+
+  # --- Greater Toronto Area (GTA) ---
+  "CYYZ", # Toronto Pearson – Canada’s busiest airport, major climatology anchor
+  "CYTZ", # Billy Bishop Toronto City – downtown Toronto airport, strong contrast with Pearson
+  "CYOO", # Oshawa – eastern GTA, smaller but fills geographic gap
+
+  # --- Central Ontario / Cottage Country ---
+  "CYQA"  # Muskoka – central Ontario recreational/cottage area, unique lake-effect patterns
+)
+
 OUTFILE      <- "saved_METARs.csv"   # write to repo root (or set an absolute path)
 APPEND_MODE  <- TRUE                 # append + de-dupe by (icao, observed_utc)
 # ------------------------------------------------------------
