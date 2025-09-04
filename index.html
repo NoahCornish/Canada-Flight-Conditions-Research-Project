@@ -21,10 +21,12 @@
       margin-top: 1rem;
     }
 
+    /* Original card style */
     .card {
+      background: white;
       border-radius: 10px;
-      padding: 0.6rem;
-      color: white;
+      padding: 0.8rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -33,19 +35,27 @@
       cursor: pointer;
       transition: transform 0.1s;
     }
-    .card:hover { transform: scale(1.03); }
+    .card:hover { transform: scale(1.02); }
 
     .icao { font-size: 1.2rem; font-weight: bold; }
-    .obs-time { font-size: 0.7rem; opacity: 0.9; margin: 2px 0 6px 0; }
+    .obs-time { font-size: 0.7rem; color: #555; margin: 2px 0 6px 0; }
     .temp { font-size: 1.1rem; margin-bottom: 2px; }
     .humidity, .wind { font-size: 0.8rem; margin: 1px 0; }
     .arrow { display: inline-block; transform-origin: center; font-size: 1rem; }
 
-    /* Category colors */
-    .cat-VFR  { background: #2ecc71; }  /* green */
-    .cat-MVFR { background: #3498db; }  /* blue */
-    .cat-IFR  { background: #e74c3c; }  /* red */
-    .cat-LIFR { background: #8e44ad; }  /* purple */
+    /* Category badge inside cards */
+    .category {
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+    .cat-VFR  { background: #2ecc71; }
+    .cat-MVFR { background: #3498db; }
+    .cat-IFR  { background: #e74c3c; }
+    .cat-LIFR { background: #8e44ad; }
 
     /* Compact for iPhones */
     @media (max-width: 500px) {
@@ -85,7 +95,7 @@
       right: 12px;
       font-size: 1.2rem;
       font-weight: bold;
-      color: #888;
+      color: #e74c3c;
       cursor: pointer;
     }
     .close-btn:hover { color: #000; }
@@ -181,9 +191,10 @@
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
           const div = document.createElement("div");
-          div.className = `card cat-${r.flight_category}`;
+          div.className = "card";
           div.innerHTML = `
             <div class="icao">${r.icao}</div>
+            <div class="category cat-${r.flight_category}">${r.flight_category}</div>
             <div class="obs-time">${toEDT(r.observed_utc)}</div>
             <div class="temp">${r.temp_c}°C</div>
             <div class="humidity">Humidity: ${r.rh_percent}%</div>
