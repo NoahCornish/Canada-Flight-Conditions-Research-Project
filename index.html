@@ -13,8 +13,9 @@
     #latest-table th, #latest-table td {
       border: 1px solid #ddd; padding: 8px; text-align: center;
     }
-    #latest-table th { background: #2c3e50; color: white; }
+    #latest-table th { background: #2c3e50; color: white; cursor: pointer; }
     .chart-container { width: 95%; max-width: 900px; margin-top: 2rem; }
+    #searchBox { padding: 6px; margin-top: 10px; width: 200px; }
   </style>
 </head>
 <body>
@@ -25,16 +26,19 @@
   <p><a href="saved_METARs.csv">Download latest dataset (CSV)</a></p>
 
   <h2>📊 Latest Observations</h2>
+  <label for="searchBox">Filter by Airport (ICAO): </label>
+  <input type="text" id="searchBox" placeholder="e.g. CYMO">
+
   <table id="latest-table">
     <thead>
       <tr>
-        <th>Airport</th>
-        <th>Observed (EDT)</th>
-        <th>Category</th>
-        <th>Temp (°C)</th>
-        <th>Humidity (%)</th>
-        <th>Wind Dir (°)</th>
-        <th>Wind (kts)</th>
+        <th onclick="sortTable(0)">Airport ⬍</th>
+        <th onclick="sortTable(1)">Observed (EDT) ⬍</th>
+        <th onclick="sortTable(2)">Category ⬍</th>
+        <th onclick="sortTable(3)">Temp (°C) ⬍</th>
+        <th onclick="sortTable(4)">Humidity (%) ⬍</th>
+        <th onclick="sortTable(5)">Wind Dir (°) ⬍</th>
+        <th onclick="sortTable(6)">Wind (kts) ⬍</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -53,11 +57,52 @@
     function toEDT(utcString) {
       if (!utcString) return "";
       const date = new Date(utcString + "Z"); // force UTC
-      // EDT = UTC - 4h
-      date.setHours(date.getHours() - 4);
+      date.setHours(date.getHours() - 4); // shift to EDT
       return date.toISOString().replace("T", " ").substring(0,16);
     }
 
+    // Sort table columns
+    function sortTable(colIndex) {
+      const table = document.getElementById("latest-table");
+      let switching = true, dir = "asc";
+      while (switching) {
+        switching = false;
+        const rows = table.rows;
+        for (let i = 1; i < rows.length - 1; i++) {
+          let shouldSwitch = false;
+          const x = rows[i].getElementsByTagName("TD")[colIndex];
+          const y = rows[i+1].getElementsByTagName("TD")[colIndex];
+          if (dir === "asc" && x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+          } else if (dir === "desc" && x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+          }
+          if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i+1], rows[i]);
+            switching = true;
+            break;
+          }
+        }
+        if (!switching && dir === "asc") { dir = "desc"; switching = true; }
+      }
+    }
+
+    // Filter table by ICAO
+    document.addEventListener("input", function(e) {
+      if (e.target.id === "searchBox") {
+        const filter = e.target.value.toUpperCase();
+        const table = document.getElementById("latest-table");
+        const trs = table.getElementsByTagName("tr");
+        for (let i = 1; i < trs.length; i++) {
+          const td = trs[i].getElementsByTagName("td")[0]; // Airport column
+          if (td) {
+            trs[i].style.display = td.textContent.toUpperCase().includes(filter) ? "" : "none";
+          }
+        }
+      }
+    });
+
+    // --- Load data and render ---
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
@@ -108,12 +153,7 @@
           },
           options: {
             responsive: true,
-            plugins: {
-              title: {
-                display: true,
-                text: "Current Flight Category Distribution Across Ontario Airports"
-              }
-            }
+            plugins: { title: { display: true, text: "Current Flight Category Distribution" } }
           }
         });
 
@@ -123,9 +163,7 @@
           if (!r.observed_utc || !r.flight_category) return;
           const t = r.observed_utc.substring(0,16); // minute precision
           if (!grouped[t]) grouped[t] = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
-          if (grouped[t][r.flight_category] !== undefined) {
-            grouped[t][r.flight_category]++;
-          }
+          if (grouped[t][r.flight_category] !== undefined) grouped[t][r.flight_category]++;
         });
 
         const times = Object.keys(grouped).sort();
@@ -147,9 +185,7 @@
           },
           options: {
             responsive: true,
-            plugins: {
-              title: { display: true, text: "Flight Category Trends Over Time" }
-            },
+            plugins: { title: { display: true, text: "Flight Category Trends Over Time" } },
             scales: {
               x: { title: { display: true, text: "Observed (EDT)" } },
               y: { beginAtZero: true, title: { display: true, text: "Number of Airports" } }
