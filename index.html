@@ -14,7 +14,7 @@
       border: 1px solid #ddd; padding: 8px; text-align: center;
     }
     #latest-table th { background: #2c3e50; color: white; }
-    .chart-container { width: 600px; margin-top: 2rem; }
+    .chart-container { width: 95%; max-width: 900px; margin-top: 2rem; }
   </style>
 </head>
 <body>
@@ -29,14 +29,12 @@
     <thead>
       <tr>
         <th>Airport</th>
-        <th>Observed (UTC)</th>
+        <th>Observed (EDT)</th>
         <th>Category</th>
         <th>Temp (°C)</th>
-        <th>Dewpoint (°C)</th>
         <th>Humidity (%)</th>
-        <th>Wind (°)</th>
+        <th>Wind Dir (°)</th>
         <th>Wind (kts)</th>
-        <th>Visibility (m)</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -46,14 +44,27 @@
     <canvas id="categoryChart"></canvas>
   </div>
 
+  <div class="chart-container">
+    <canvas id="trendChart"></canvas>
+  </div>
+
   <script>
+    // Convert UTC string to EDT (UTC-4)
+    function toEDT(utcString) {
+      if (!utcString) return "";
+      const date = new Date(utcString + "Z"); // force UTC
+      // EDT = UTC - 4h
+      date.setHours(date.getHours() - 4);
+      return date.toISOString().replace("T", " ").substring(0,16);
+    }
+
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
       complete: function(results) {
         const rows = results.data;
-        
-        // --- Show most recent observation for each airport ---
+
+        // --- Latest observation per airport ---
         const latestByAirport = {};
         rows.forEach(r => {
           if (!r.icao) return;
@@ -67,19 +78,17 @@
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>${r.icao}</td>
-            <td>${r.observed_utc}</td>
+            <td>${toEDT(r.observed_utc)}</td>
             <td>${r.flight_category}</td>
             <td>${r.temp_c}</td>
-            <td>${r.dewpoint_c}</td>
             <td>${r.rh_percent}</td>
             <td>${r.wind_dir_deg}</td>
             <td>${r.wind_kts}</td>
-            <td>${r.vis_m}</td>
           `;
           tbody.appendChild(tr);
         });
 
-        // --- Flight category distribution chart ---
+        // --- Current category distribution ---
         const categories = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
         Object.values(latestByAirport).forEach(r => {
           if (categories[r.flight_category] !== undefined) {
@@ -104,6 +113,46 @@
                 display: true,
                 text: "Current Flight Category Distribution Across Ontario Airports"
               }
+            }
+          }
+        });
+
+        // --- Trend chart over time ---
+        const grouped = {};
+        rows.forEach(r => {
+          if (!r.observed_utc || !r.flight_category) return;
+          const t = r.observed_utc.substring(0,16); // minute precision
+          if (!grouped[t]) grouped[t] = { LIFR:0, IFR:0, MVFR:0, VFR:0 };
+          if (grouped[t][r.flight_category] !== undefined) {
+            grouped[t][r.flight_category]++;
+          }
+        });
+
+        const times = Object.keys(grouped).sort();
+        const lifr = times.map(t => grouped[t].LIFR);
+        const ifr  = times.map(t => grouped[t].IFR);
+        const mvfr = times.map(t => grouped[t].MVFR);
+        const vfr  = times.map(t => grouped[t].VFR);
+
+        new Chart(document.getElementById("trendChart"), {
+          type: "line",
+          data: {
+            labels: times.map(toEDT),
+            datasets: [
+              { label: "LIFR", data: lifr, borderColor: "#8e44ad", fill: false },
+              { label: "IFR",  data: ifr,  borderColor: "#e67e22", fill: false },
+              { label: "MVFR", data: mvfr, borderColor: "#3498db", fill: false },
+              { label: "VFR",  data: vfr,  borderColor: "#2ecc71", fill: false }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: { display: true, text: "Flight Category Trends Over Time" }
+            },
+            scales: {
+              x: { title: { display: true, text: "Observed (EDT)" } },
+              y: { beginAtZero: true, title: { display: true, text: "Number of Airports" } }
             }
           }
         });
