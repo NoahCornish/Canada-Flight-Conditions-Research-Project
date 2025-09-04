@@ -118,14 +118,18 @@
     .wind-compass .W { left: 2px; top: 50%; transform: translateY(-50%); }
 
     .wind-arrow {
-      width: 0; height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-bottom: 22px solid;
-      position: absolute;
-      left: 50%; top: 50%;
-      transform-origin: center bottom;
-    }
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 28px solid;   /* make it point outward */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center; /* rotate from the center */
+  transform: translate(-50%, -50%);
+}
+
 
     /* Compact for iPhones */
     @media (max-width: 500px) {
@@ -308,7 +312,8 @@
                 <div class="label S">S</div>
                 <div class="label E">E</div>
                 <div class="label W">W</div>
-                <div class="wind-arrow" style="transform: rotate(${deg}deg); border-bottom-color:${windColor(speed)}"></div>
+               <div class="wind-arrow"
+               style="transform: translate(-50%, -50%) rotate(${deg}deg); border-top-color:${windColor(speed)}"></div>
               </div>
               ${deg}° @ ${speed} kts
             </div>
