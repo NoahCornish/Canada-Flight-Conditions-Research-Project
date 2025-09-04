@@ -5,10 +5,14 @@
   <title>Ontario METAR Flight Conditions</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile scaling -->
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
     /* General page styling */
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', Arial, sans-serif;
       margin: 0;
       background: #f4f6f8;
       color: #2c3e50;
@@ -19,6 +23,9 @@
       color: white;
       padding: 1rem;
       text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     header h1 {
       margin: 0;
@@ -44,6 +51,30 @@
       padding-bottom: 0.25rem;
     }
 
+    /* Legend strip */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 0.5rem 0 1rem 0;
+      font-size: 0.9rem;
+    }
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-vfr { background: #2ecc71; }
+    .dot-mvfr { background: #3498db; }
+    .dot-ifr { background: #e74c3c; }
+    .dot-lifr { background: #8e44ad; }
+
     /* Grid layout for airport cards */
     .grid {
       display: grid;
@@ -52,7 +83,7 @@
       margin-top: 1rem;
     }
 
-    /* Card style (unchanged) */
+    /* Card style */
     .card {
       background: white;
       border-radius: 10px;
@@ -68,11 +99,10 @@
     }
     .card:hover { transform: scale(1.02); }
 
-    .icao { font-size: 1.2rem; font-weight: bold; }
+    .icao { font-size: 1.2rem; font-weight: 600; }
     .obs-time { font-size: 0.7rem; color: #555; margin: 2px 0 6px 0; }
-    .temp { font-size: 1.1rem; margin-bottom: 2px; }
-    .humidity, .wind { font-size: 0.8rem; margin: 1px 0; }
-    .arrow { display: inline-block; transform-origin: center; font-size: 1rem; }
+    .temp { font-size: 1.1rem; margin-bottom: 2px; font-weight: 500; }
+    .humidity, .wind { font-size: 0.8rem; margin: 1px 0; color: #444; }
 
     /* Category badge */
     .category {
@@ -87,6 +117,18 @@
     .cat-MVFR { background: #3498db; }
     .cat-IFR  { background: #e74c3c; }
     .cat-LIFR { background: #8e44ad; }
+
+    /* CSS Wind arrow */
+    .wind-arrow {
+      width: 0; 
+      height: 0; 
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 12px solid #2c3e50;
+      margin-right: 4px;
+      display: inline-block;
+      transform-origin: center;
+    }
 
     /* Compact for iPhones */
     @media (max-width: 500px) {
@@ -158,6 +200,14 @@
       white-space: pre-wrap;
       text-align: left;
     }
+
+    /* Last updated banner */
+    .last-updated {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -168,6 +218,14 @@
 
   <main>
     <h2>📊 Live Conditions</h2>
+    <div class="last-updated" id="lastUpdated"></div>
+    <div class="legend">
+      <span><span class="dot dot-vfr"></span> VFR</span>
+      <span><span class="dot dot-mvfr"></span> MVFR</span>
+      <span><span class="dot dot-ifr"></span> IFR</span>
+      <span><span class="dot dot-lifr"></span> LIFR</span>
+    </div>
+
     <div class="grid" id="airportGrid"></div>
 
     <div class="download">
@@ -192,10 +250,7 @@
       date.setHours(date.getHours() - 4);
       return date.toISOString().replace("T", " ").substring(0,16);
     }
-    function windArrow(deg) {
-      if (!deg) return "";
-      return `<span class="arrow" style="transform: rotate(${deg}deg)">⬆</span>`;
-    }
+
     function showModal(title, raw) {
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalRaw").textContent = raw;
@@ -204,6 +259,7 @@
     function closeModal() {
       document.getElementById("metarModal").style.display = "none";
     }
+
     const airportNames = {
       CYMO: "Moosonee Airport", CYYB: "North Bay Jack Garland Airport",
       CYOO: "Oshawa Executive Airport", CYOW: "Ottawa Macdonald–Cartier Int’l",
@@ -214,18 +270,31 @@
       CYQA: "Muskoka Airport", CYPL: "Pickle Lake Airport",
       CYQT: "Thunder Bay Int’l Airport"
     };
+
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
       complete: function(results) {
         const rows = results.data;
         const latestByAirport = {};
+        let latestTime = null;
+
         rows.forEach(r => {
           if (!r.icao) return;
           if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
             latestByAirport[r.icao] = r;
           }
+          if (r.observed_utc && (!latestTime || new Date(r.observed_utc) > new Date(latestTime))) {
+            latestTime = r.observed_utc;
+          }
         });
+
+        // Show last updated
+        if (latestTime) {
+          document.getElementById("lastUpdated").textContent =
+            "Last Updated: " + toEDT(latestTime) + " EDT";
+        }
+
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
           const div = document.createElement("div");
@@ -235,8 +304,8 @@
             <div class="category cat-${r.flight_category}">${r.flight_category}</div>
             <div class="obs-time">${toEDT(r.observed_utc)}</div>
             <div class="temp">${r.temp_c}°C</div>
-            <div class="humidity">Humidity: ${r.rh_percent}%</div>
-            <div class="wind">${windArrow(r.wind_dir_deg)} ${r.wind_kts} kts</div>
+            <div class="humidity">💧 ${r.rh_percent}%</div>
+            <div class="wind"><span class="wind-arrow" style="transform: rotate(${r.wind_dir_deg}deg)"></span> ${r.wind_kts} kts</div>
           `;
           div.addEventListener("click", () => {
             const name = airportNames[r.icao] || "Unknown Airport";
