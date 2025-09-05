@@ -1,4 +1,4 @@
-name: 🌤️ Fetch METARs (Every 10 Minutes)
+name: 🌤️ Fetch METARs
 
 on:
   schedule:
