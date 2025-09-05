@@ -2,7 +2,7 @@ name: 🌤️ Fetch METARs (Every 10 Minutes)
 
 on:
   schedule:
-    - cron: "0,30 * * * *"   # every 10 min UTC
+    - cron: "0,30 * * * *"   # top and bottom of the hour
   workflow_dispatch:
 
 permissions:
