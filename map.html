@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- PapaParse for CSV -->
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
@@ -26,12 +26,9 @@
       border-radius: 6px;
       font-size: 0.9rem;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      z-index: 1000; /* always above map */
+      z-index: 1000;
     }
-    .legend h4 {
-      margin: 0 0 6px 0;
-      font-size: 1rem;
-    }
+    .legend h4 { margin: 0 0 6px 0; font-size: 1rem; }
     .legend span { display: flex; align-items: center; margin-bottom: 4px; }
     .dot {
       width: 12px; height: 12px; border-radius: 50%;
@@ -45,7 +42,7 @@
 </head>
 <body>
   <div id="map"></div>
-  <div class="legend" id="legend">
+  <div class="legend">
     <h4>Flight Categories</h4>
     <span><span class="dot dot-vfr"></span> VFR</span>
     <span><span class="dot dot-mvfr"></span> MVFR</span>
@@ -69,11 +66,10 @@
       CYQG: [42.275, -82.955],  // Windsor
       CYVV: [44.746, -81.107],  // Wiarton
       CYYZ: [43.677, -79.624],  // Toronto Pearson
-      CYQA: [44.974, -79.303],  // Muskoka
-      CYTZ: [43.627, -79.396]   // Billy Bishop
+      CYQA: [44.974, -79.303]   // Muskoka
+      // CYTZ excluded unless added in fetch script
     };
 
-    // Colors for flight categories
     function categoryColor(cat) {
       switch(cat) {
         case "VFR": return "#2ecc71";
@@ -90,17 +86,17 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Collect bounds for all airports
-    const bounds = L.latLngBounds(Object.values(airports));
+    const bounds = L.latLngBounds([]);
 
-    // Load CSV and plot markers
-    Papa.parse("saved_METARs.csv", {
+    // Use cleaned dataset
+    Papa.parse("clean_metars.csv", {
       download: true,
       header: true,
       complete: function(results) {
-        const rows = results.data;
+        const rows = results.data.filter(r => r.icao && r.observed_utc);
         const latestByAirport = {};
 
+        // pick most recent per airport
         rows.forEach(r => {
           if (!r.icao) return;
           if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
@@ -126,13 +122,20 @@
             <strong>${icao}</strong><br>
             Category: <span style="color:${color}; font-weight:bold">${r.flight_category}</span><br>
             Temp: ${r.temp_c}°C<br>
+            Dewpoint: ${r.dewpoint_c}°C<br>
             Wind: ${r.wind_dir_deg}° @ ${r.wind_kts} kts<br>
-            Obs: ${r.observed_local || r.observed_utc}
+            Altimeter: ${r.altimeter_hg} inHg<br>
+            Obs: ${r.observed_utc}
           `);
+
+          bounds.extend([lat, lon]);
         });
 
-        // Fit map to all markers
-        map.fitBounds(bounds, { padding: [40, 40] });
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [40, 40] });
+        } else {
+          map.setView([47.5, -80], 5); // fallback: center Ontario
+        }
       }
     });
   </script>
