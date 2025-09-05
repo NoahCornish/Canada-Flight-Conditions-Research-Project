@@ -25,11 +25,12 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
     header h1 { margin: 0; font-size: 1.6rem; }
     header p { margin: 0.25rem 0 0; font-size: 0.9rem; opacity: 0.9; }
 
-    main { max-width: 1000px; margin: auto; padding: 1.5rem; }
+    main { max-width: 1200px; margin: auto; padding: 1.5rem; }
     h2 {
       margin-top: 1.5rem;
       color: #34495e;
@@ -38,141 +39,55 @@
       padding-bottom: 0.25rem;
     }
 
-    /* Legend strip */
-    .legend {
+    /* Legend */
+    .legend, .wind-legend {
       display: flex;
       justify-content: center;
       gap: 1rem;
+      flex-wrap: wrap;
       margin: 0.5rem 0 1rem 0;
       font-size: 0.9rem;
     }
-    .legend span { display: flex; align-items: center; gap: 0.3rem; }
+    .legend span, .wind-legend span { display: flex; align-items: center; gap: 0.3rem; }
     .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     .dot-vfr { background: #2ecc71; }
     .dot-mvfr { background: #3498db; }
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
+    .dot-calm { background: #2ecc71; }
+    .dot-moderate { background: #f1c40f; }
+    .dot-strong { background: #e67e22; }
+    .dot-severe { background: #e74c3c; }
 
-    /* Grid layout */
+    /* Grid */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
       margin-top: 1rem;
     }
 
-    /* Card style */
+    /* Card */
     .card {
       background: white;
-      border-radius: 10px;
-      padding: 0.8rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      font-size: 0.9rem;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      transition: transform 0.15s;
       cursor: pointer;
-      transition: transform 0.1s;
     }
-    .card:hover { transform: scale(1.02); }
+    .card:hover { transform: translateY(-3px); }
 
-    .icao { font-size: 1.2rem; font-weight: 600; }
-    .obs-time { font-size: 0.7rem; color: #555; margin: 2px 0 6px 0; }
-    .temp { font-size: 1.1rem; margin-bottom: 2px; font-weight: 500; }
-    .humidity { font-size: 0.8rem; margin: 1px 0; color: #444; }
-
-    /* Category badge */
-    .category {
-      font-size: 0.8rem;
-      font-weight: bold;
-      padding: 2px 6px;
-      border-radius: 5px;
-      margin-bottom: 0.5rem;
-      color: white;
-    }
+    .icao { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+    .category { font-size: 0.85rem; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: white; display: inline-block; margin-bottom: 6px; }
     .cat-VFR  { background: #2ecc71; }
     .cat-MVFR { background: #3498db; }
     .cat-IFR  { background: #e74c3c; }
     .cat-LIFR { background: #8e44ad; }
 
-    /* Wind compass */
-    .wind { font-size: 0.8rem; margin-top: 6px; }
-    .wind-compass {
-      position: relative;
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 6px auto;
-      border: 2px solid #bbb;
-      border-radius: 50%;
-      font-size: 0.65rem;
-      color: #555;
-    }
-    .wind-compass .label {
-      position: absolute;
-      font-weight: bold;
-    }
-    .wind-compass .N { top: 2px; left: 50%; transform: translateX(-50%); }
-    .wind-compass .S { bottom: 2px; left: 50%; transform: translateX(-50%); }
-    .wind-compass .E { right: 2px; top: 50%; transform: translateY(-50%); }
-    .wind-compass .W { left: 2px; top: 50%; transform: translateY(-50%); }
-
-    .wind-arrow {
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 28px solid;   /* make it point outward */
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-origin: center center; /* rotate from the center */
-  transform: translate(-50%, -50%);
-}
-    .wind-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  font-size: 0.85rem;
-  margin: 0.5rem 0 1rem 0;
-}
-
-.wind-legend .dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot-calm { background: #2ecc71; }   /* green */
-.dot-moderate { background: #f1c40f; } /* yellow */
-.dot-strong { background: #e67e22; }   /* orange */
-.dot-severe { background: #e74c3c; }   /* red */
-
-
-
-    /* Compact for iPhones */
-    @media (max-width: 500px) {
-      header h1 { font-size: 1.3rem; }
-      header p { font-size: 0.8rem; }
-      h2 { font-size: 1.1rem; }
-      .grid { grid-template-columns: 1fr; }
-    }
-
-    /* Download */
-    .download { margin-top: 2rem; text-align: center; }
-    .download a {
-      display: inline-block;
-      background: #3498db;
-      color: white;
-      text-decoration: none;
-      padding: 0.6rem 1rem;
-      border-radius: 6px;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .download a:hover { background: #2c80b4; }
+    .temp { font-size: 1.1rem; font-weight: 500; }
+    .humidity { font-size: 0.85rem; color: #666; }
+    .obs-time { font-size: 0.75rem; color: #777; margin-top: 6px; }
 
     /* Modal */
     .modal {
@@ -187,47 +102,33 @@
     }
     .modal-content {
       background: white;
-      border-radius: 8px;
-      padding: 1rem;
-      width: 90%;
-      max-width: 400px;
-      position: relative;
-      text-align: center;
+      border-radius: 10px;
+      padding: 1.5rem;
+      width: 95%;
+      max-width: 600px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      font-size: 0.95rem;
     }
-    .modal h3 { margin-top: 0; font-size: 1.2rem; color: #2c3e50; }
+    .modal h3 { margin-top: 0; font-size: 1.3rem; border-bottom: 2px solid #eee; padding-bottom: 0.4rem; }
     .close-btn {
       position: absolute;
-      top: 8px; right: 12px;
-      font-size: 1.2rem;
+      top: 12px; right: 18px;
+      font-size: 1.4rem;
       font-weight: bold;
       color: #e74c3c;
       cursor: pointer;
     }
     .close-btn:hover { color: #000; }
-    .raw-text {
-      margin-top: 0.75rem;
-      padding: 0.5rem;
-      background: #f0f0f0;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-      text-align: left;
-    }
 
-    /* Last updated */
-    .last-updated {
-      text-align: center;
-      font-size: 0.85rem;
-      color: #666;
-      margin-bottom: 0.5rem;
-    }
+    .detail-row { display: flex; justify-content: space-between; margin: 6px 0; }
+    .label { font-weight: 600; color: #333; }
+    .raw-section { margin-top: 1rem; font-size: 0.85rem; background: #f8f9fa; padding: 0.8rem; border-radius: 6px; font-family: monospace; white-space: pre-wrap; }
   </style>
 </head>
 <body>
   <header>
     <h1>🌤️ Ontario METAR Flight Conditions</h1>
-    <p>Live updates every 10 minutes from 15 Ontario airports</p>
+    <p>Using cleaned METAR data from 15 Ontario airports</p>
   </header>
 
   <main>
@@ -239,29 +140,23 @@
       <span><span class="dot dot-ifr"></span> IFR</span>
       <span><span class="dot dot-lifr"></span> LIFR</span>
     </div>
-
     <div class="legend wind-legend">
-  <span><span class="dot dot-calm"></span> 0–10 kts (Calm/Light)</span>
-  <span><span class="dot dot-moderate"></span> 11–20 kts (Moderate)</span>
-  <span><span class="dot dot-strong"></span> 21–30 kts (Strong)</span>
-  <span><span class="dot dot-severe"></span> 31+ kts (Severe)</span>
-</div>
-
+      <span><span class="dot dot-calm"></span> 0–10 kts</span>
+      <span><span class="dot dot-moderate"></span> 11–20 kts</span>
+      <span><span class="dot dot-strong"></span> 21–30 kts</span>
+      <span><span class="dot dot-severe"></span> 31+ kts</span>
+    </div>
 
     <div class="grid" id="airportGrid"></div>
-
-    <div class="download">
-      <h2>📥 Download Data</h2>
-      <a href="saved_METARs.csv">Download latest dataset (CSV)</a>
-    </div>
   </main>
 
-  <!-- Popup modal -->
+  <!-- Modal -->
   <div id="metarModal" class="modal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal()">✖</span>
       <h3 id="modalTitle"></h3>
-      <div class="raw-text" id="modalRaw"></div>
+      <div id="modalDetails"></div>
+      <div class="raw-section" id="modalRaw"></div>
     </div>
   </div>
 
@@ -274,33 +169,35 @@
     }
 
     function windColor(speed) {
-      if (speed <= 10) return "#2ecc71"; // green
-      if (speed <= 20) return "#f1c40f"; // yellow
-      if (speed <= 30) return "#e67e22"; // orange
-      return "#e74c3c"; // red
+      if (speed <= 10) return "#2ecc71";
+      if (speed <= 20) return "#f1c40f";
+      if (speed <= 30) return "#e67e22";
+      return "#e74c3c";
     }
 
-    function showModal(title, raw) {
+    function showModal(title, r) {
       document.getElementById("modalTitle").textContent = title;
-      document.getElementById("modalRaw").textContent = raw;
+
+      let details = `
+        <div class="detail-row"><span class="label">Flight Rules:</span> ${r.flight_category}</div>
+        <div class="detail-row"><span class="label">Observed:</span> ${toEDT(r.observed_utc)}</div>
+        <div class="detail-row"><span class="label">Temp:</span> ${r.temp_c} °C</div>
+        <div class="detail-row"><span class="label">Dew Point:</span> ${r.dewpoint_c} °C</div>
+        <div class="detail-row"><span class="label">Humidity:</span> ${r.rh_percent}%</div>
+        <div class="detail-row"><span class="label">Wind:</span> ${r.wind_dir_deg}° @ ${r.wind_kts} kts</div>
+        <div class="detail-row"><span class="label">Altimeter:</span> ${r.altimeter_hg} inHg</div>
+        <div class="detail-row"><span class="label">Conditions:</span> ${r.conditions || "—"}</div>
+      `;
+      document.getElementById("modalDetails").innerHTML = details;
+      document.getElementById("modalRaw").textContent = r.raw_text || "No raw METAR available";
+
       document.getElementById("metarModal").style.display = "flex";
     }
     function closeModal() {
       document.getElementById("metarModal").style.display = "none";
     }
 
-    const airportNames = {
-      CYMO: "Moosonee Airport", CYYB: "North Bay Jack Garland Airport",
-      CYOO: "Oshawa Executive Airport", CYOW: "Ottawa Macdonald–Cartier Int’l",
-      CYQG: "Windsor Int’l Airport", CYTS: "Timmins Victor M. Power Airport",
-      CYSB: "Sudbury Airport", CYGK: "Kingston Airport",
-      CYXU: "London Int’l Airport", CYHM: "Hamilton Int’l Airport",
-      CYYZ: "Toronto Pearson Int’l", CYTZ: "Billy Bishop Toronto City",
-      CYQA: "Muskoka Airport", CYPL: "Pickle Lake Airport",
-      CYQT: "Thunder Bay Int’l Airport"
-    };
-
-    Papa.parse("saved_METARs.csv", {
+    Papa.parse("clean_metars.csv", {
       download: true,
       header: true,
       complete: function(results) {
@@ -325,31 +222,17 @@
 
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
-          const speed = parseInt(r.wind_kts) || 0;
-          const deg = parseInt(r.wind_dir_deg) || 0;
           const div = document.createElement("div");
           div.className = "card";
           div.innerHTML = `
             <div class="icao">${r.icao}</div>
             <div class="category cat-${r.flight_category}">${r.flight_category}</div>
-            <div class="obs-time">${toEDT(r.observed_utc)}</div>
-            <div class="temp">${r.temp_c}°C</div>
+            <div class="temp">${r.temp_c} °C</div>
             <div class="humidity">💧 ${r.rh_percent}%</div>
-            <div class="wind">
-              <div class="wind-compass">
-                <div class="label N">N</div>
-                <div class="label S">S</div>
-                <div class="label E">E</div>
-                <div class="label W">W</div>
-               <div class="wind-arrow"
-               style="transform: translate(-50%, -50%) rotate(${deg}deg); border-top-color:${windColor(speed)}"></div>
-              </div>
-              ${deg}° @ ${speed} kts
-            </div>
+            <div class="obs-time">${toEDT(r.observed_utc)}</div>
           `;
           div.addEventListener("click", () => {
-            const name = airportNames[r.icao] || "Unknown Airport";
-            showModal(`${r.icao} – ${name}`, r.raw_text || "No raw METAR available");
+            showModal(`${r.icao}`, r);
           });
           grid.appendChild(div);
         });
