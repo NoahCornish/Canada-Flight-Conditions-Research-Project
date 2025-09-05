@@ -38,7 +38,7 @@ STATIONS <- c(
 
   # --- Southwest Ontario ---
   "CYQG", # Windsor – Detroit border, lake-effect
-  "CYZR", # Sarnia – Lake Huron region
+  "CYOS", # Owen Sound – Lake Huron region
 
   # --- Greater Toronto Area ---
   "CYYZ", # Toronto Pearson – GTA anchor
