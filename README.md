@@ -31,11 +31,6 @@ With METARs collected **every 30 minutes**, this dataset will grow into a valuab
 
 *(Ontario core + additional 35 airports = 50 total for nationwide climatology)*
 
-## 🗺️ National Coverage Map
-Below is the current spread of 50 airports included in the project:
-
-![Canadian METAR Network](charts/airport_map.png)
-
 ---
 
 ## How It Works
