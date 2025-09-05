@@ -1,47 +1,32 @@
 #!/usr/bin/env Rscript
 # metar_fetch.R
-# Fetch decoded METAR for multiple ICAOs (single row per station) and write a CSV.
-# Option A: Append + de-duplicate by (icao, observed_utc), keeping the newest fetch.
-# - API key is read from env var CHECKWX_API_KEY
-# - Edit STATIONS to your list (CYMO, CYYB, CYOO, CYOW, CYQG)
+# Fetch decoded METARs for multiple ICAOs and save:
+#   1) A growing "monster file" (saved_METARs.csv)
+#   2) Monthly archive files (metars_YYYY_MM.csv)
+#
+# API key comes from env var CHECKWX_API_KEY
 # ------------------------------------------------------------------------------
 
 # ----------------------- User settings ----------------------
-# Ontario Airports Selected for Maximum Geographic Spread (15 total)
-# Covers: Far North, Northwest, Northeast, Eastern Ontario, GTA, Central Ontario, and Southwest
 STATIONS <- c(
   # --- Far North / James Bay ---
-  "CYMO", # Moosonee – access point for James Bay communities, important for northern climatology
-  "CYPL", # Pickle Lake – gateway airport for remote northern Ontario (many flights to First Nations)
-
+  "CYMO", "CYPL",
   # --- Northeast Corridor ---
-  "CYTS", # Timmins – key hub in Northeastern Ontario mining and forestry region
-  "CYSB", # Sudbury – largest city in Northern Ontario, significant aviation hub
-  "CYYB", # North Bay – transitional airport between northern and southern Ontario
-
+  "CYTS", "CYSB", "CYYB",
   # --- Northwest Ontario ---
-  "CYQT", # Thunder Bay – primary hub for Northwestern Ontario, regional airline operations
-
+  "CYQT",
   # --- Eastern Ontario ---
-  "CYOW", # Ottawa – major international airport, Eastern Ontario reference point
-  "CYGK", # Kingston – smaller but strategically important, captures Lake Ontario east-end conditions
-
+  "CYOW", "CYGK",
   # --- Southwest Ontario ---
-  "CYQG", # Windsor – major border city, lake-effect weather influences
-  "CYXU", # London – large regional airport, southwestern Ontario climate representation
-  "CYHM", # Hamilton – southern Ontario cargo hub, lake influence
-
-  # --- Greater Toronto Area (GTA) ---
-  "CYYZ", # Toronto Pearson – Canada’s busiest airport, major climatology anchor
-  "CYTZ", # Billy Bishop Toronto City – downtown Toronto airport, strong contrast with Pearson
-  "CYOO", # Oshawa – eastern GTA, smaller but fills geographic gap
-
-  # --- Central Ontario / Cottage Country ---
-  "CYQA"  # Muskoka – central Ontario recreational/cottage area, unique lake-effect patterns
+  "CYQG", "CYXU", "CYHM",
+  # --- GTA ---
+  "CYYZ", "CYTZ", "CYOO",
+  # --- Central Ontario ---
+  "CYQA"
 )
 
-OUTFILE      <- "saved_METARs.csv"   # write to repo root (or set an absolute path)
-APPEND_MODE  <- TRUE                 # append + de-dupe by (icao, observed_utc)
+OUTFILE_MONSTER <- "saved_METARs.csv"   # master archive
+APPEND_MODE     <- TRUE
 # ------------------------------------------------------------
 
 # Install missing packages quietly, then load
@@ -66,15 +51,14 @@ if (is.na(api_key) || nchar(api_key) == 0) {
        'Sys.setenv(CHECKWX_API_KEY = "YOUR_KEY_HERE")', call. = FALSE)
 }
 
-# Helper: safe extract for possibly-missing fields
+# Helper: safe extract
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
-# Fetch one station, return a one-row tibble (no clouds)
+# Fetch one station
 get_metar_row <- function(icao, key) {
   url <- paste0("https://api.checkwx.com/metar/", icao, "/decoded")
   res <- VERB("GET", url = url, add_headers(`X-API-Key` = key))
 
-  # HTTP status handling
   tryCatch({ stop_for_status(res) }, error = function(e) {
     warning(sprintf("Request failed for %s: %s", icao, conditionMessage(e)))
     return(tibble(
@@ -88,7 +72,8 @@ get_metar_row <- function(icao, key) {
       wind_kts        = NA_real_,
       vis_m           = NA_real_,
       altimeter_hg    = NA_real_,
-      raw_text        = NA_character_
+      raw_text        = NA_character_,
+      fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
     ))
   })
 
@@ -108,11 +93,12 @@ get_metar_row <- function(icao, key) {
       wind_kts        = NA_real_,
       vis_m           = NA_real_,
       altimeter_hg    = NA_real_,
-      raw_text        = NA_character_
+      raw_text        = NA_character_,
+      fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
     ))
   }
 
-  d <- parsed$data[1, , drop = FALSE]  # single-row data.frame with dot-named cols
+  d <- parsed$data[1, , drop = FALSE]
 
   get_num <- function(name_primary, name_alt = NULL) {
     if (name_primary %in% names(d)) as.numeric(d[[name_primary]])
@@ -124,7 +110,8 @@ get_metar_row <- function(icao, key) {
   tibble(
     icao            = get_chr("icao") %||% icao,
     observed_utc    = if ("observed" %in% names(d))
-                        tryCatch(lubridate::ymd_hms(d$observed, tz = "UTC"), error = function(e) as.POSIXct(NA))
+                        tryCatch(lubridate::ymd_hms(d$observed, tz = "UTC"),
+                                 error = function(e) as.POSIXct(NA))
                       else as.POSIXct(NA),
     flight_category = get_chr("flight_category"),
     temp_c          = get_num("temperature.celsius", "temperature"),
@@ -134,11 +121,12 @@ get_metar_row <- function(icao, key) {
     wind_kts        = get_num("wind.speed_kts", "wind_kts"),
     vis_m           = get_num("visibility.meters", "visibility"),
     altimeter_hg    = get_num("barometer.hg", "altimeter_hg"),
-    raw_text        = get_chr("raw_text")
+    raw_text        = get_chr("raw_text"),
+    fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
   )
 }
 
-# Fetch all stations and bind rows
+# Fetch all stations
 fetch_all <- function(stations, key) {
   rows <- lapply(stations, function(s) {
     tryCatch(get_metar_row(s, key), error = function(e) {
@@ -154,55 +142,56 @@ fetch_all <- function(stations, key) {
         wind_kts        = NA_real_,
         vis_m           = NA_real_,
         altimeter_hg    = NA_real_,
-        raw_text        = NA_character_
+        raw_text        = NA_character_,
+        fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
       )
     })
   })
-  bind_rows(rows) |>
-    arrange(icao, desc(observed_utc))
+  bind_rows(rows) |> arrange(icao, desc(observed_utc))
 }
 
-# Write CSV (append + de-duplicate by station & observation time)
-write_csv_safe <- function(df, outfile, append_mode = TRUE) {
-  # Ensure consistent column order/types
+# Write to monster + monthly archive
+write_csvs <- function(df, monster_file, append_mode = TRUE) {
+  # Ensure consistent column order
   col_order <- c(
     "icao","observed_utc","flight_category","temp_c","dewpoint_c","rh_percent",
     "wind_dir_deg","wind_kts","vis_m","altimeter_hg","raw_text","fetched_at_utc"
   )
-  # Add fetched_at_utc if missing
-  if (!"fetched_at_utc" %in% names(df)) df$fetched_at_utc <- as.POSIXct(NA)
-
-  if (append_mode && file.exists(outfile)) {
-    existing <- tryCatch(read.csv(outfile, stringsAsFactors = FALSE), error = function(e) NULL)
-    if (!is.null(existing) && nrow(existing)) {
-      # Coerce date-time columns back to POSIXct
-      if ("observed_utc" %in% names(existing))
-        existing$observed_utc <- as.POSIXct(existing$observed_utc, tz = "UTC")
-      if ("fetched_at_utc" %in% names(existing))
-        existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
-      else
-        existing$fetched_at_utc <- as.POSIXct(NA)
-
-      # Bind, sort, and de-duplicate keeping the most recent fetch for each (icao, observed_utc)
-      df <- dplyr::bind_rows(existing, df) |>
-        dplyr::arrange(icao, dplyr::desc(observed_utc), dplyr::desc(fetched_at_utc)) |>
-        dplyr::distinct(icao, observed_utc, .keep_all = TRUE)
-    }
-  }
-
-  # Reorder columns (add missing if previously absent)
   missing_cols <- setdiff(col_order, names(df))
   for (mc in missing_cols) df[[mc]] <- NA
   df <- df[, col_order]
 
-  utils::write.csv(df, outfile, row.names = FALSE)
-  message(sprintf("Wrote %d row(s) to %s", nrow(df), outfile))
+  # ---- Monster file ----
+  if (append_mode && file.exists(monster_file)) {
+    existing <- tryCatch(read.csv(monster_file, stringsAsFactors = FALSE), error = function(e) NULL)
+    if (!is.null(existing) && nrow(existing)) {
+      existing$observed_utc <- as.POSIXct(existing$observed_utc, tz = "UTC")
+      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
+      df <- dplyr::bind_rows(existing, df)
+    }
+  }
+  utils::write.csv(df, monster_file, row.names = FALSE)
+  message(sprintf("Appended to monster file: %s", monster_file))
+
+  # ---- Monthly archive ----
+  month_stamp <- format(Sys.time(), "%Y_%m")  # e.g. 2025_09
+  monthly_file <- sprintf("metars_%s.csv", month_stamp)
+
+  if (file.exists(monthly_file)) {
+    existing <- tryCatch(read.csv(monthly_file, stringsAsFactors = FALSE), error = function(e) NULL)
+    if (!is.null(existing) && nrow(existing)) {
+      existing$observed_utc <- as.POSIXct(existing$observed_utc, tz = "UTC")
+      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
+      df <- dplyr::bind_rows(existing, df)
+    }
+  }
+  utils::write.csv(df, monthly_file, row.names = FALSE)
+  message(sprintf("Also saved to monthly file: %s", monthly_file))
 }
 
 # --------------------------- Main ---------------------------
 results <- fetch_all(STATIONS, api_key)
-results$fetched_at_utc <- as.POSIXct(Sys.time(), tz = "UTC")
-write_csv_safe(results, OUTFILE, append_mode = APPEND_MODE)
+write_csvs(results, OUTFILE_MONSTER, append_mode = APPEND_MODE)
 
-# Optional: print preview to console
+# Preview
 print(results)
