@@ -1,4 +1,4 @@
-name: 🧹 Clean METARs (Hourly)
+name: 🧹 Clean METARs
 
 on:
   schedule:
