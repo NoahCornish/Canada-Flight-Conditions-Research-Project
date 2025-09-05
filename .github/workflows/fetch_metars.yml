@@ -44,12 +44,12 @@ jobs:
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
-        - name: 💾 Step 4 – Commit and push updated CSV (if changed)
+      - name: 💾 Step 4 – Commit and push updated data files (if changed)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage all generated files
+          # Stage all generated files: monster, monthly archives, and logs
           git add saved_METARs.csv metars_*.csv metar_log.txt || true
 
           if [ -n "$(git status --porcelain)" ]; then
@@ -101,7 +101,7 @@ jobs:
               `• **Branch:** ${branch}`,
               `• **Commit:** ${sha}`,
               `• **Time (UTC):** ${when}`,
-              `• **CSV Updated:** saved_METARs.csv`,
+              `• **Files Updated:** saved_METARs.csv, metars_*.csv, metar_log.txt`,
               ``,
               `[🔗 View run logs](${runUrl})`
             ].join("\n");
