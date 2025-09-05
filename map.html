@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Ontario METAR Map</title>
+  <title>Canada METAR Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS/JS -->
@@ -51,23 +51,34 @@
   </div>
 
   <script>
-    // Airport coordinates
+    // Airport coordinates (50 total: 15 Ontario + 35 across Canada)
     const airports = {
-      CYMO: [51.291, -80.607],  // Moosonee
-      CYER: [56.018, -87.676],  // Fort Severn
-      CYPL: [51.446, -90.214],  // Pickle Lake
-      CYQT: [48.371, -89.324],  // Thunder Bay
-      CYAM: [46.485, -84.509],  // Sault Ste. Marie
-      CYTS: [48.569, -81.377],  // Timmins
-      CYSB: [46.625, -80.798],  // Sudbury
-      CYYB: [46.363, -79.422],  // North Bay
-      CYOW: [45.322, -75.669],  // Ottawa
-      CYGK: [44.225, -76.596],  // Kingston
-      CYQG: [42.275, -82.955],  // Windsor
-      CYVV: [44.746, -81.107],  // Wiarton
-      CYYZ: [43.677, -79.624],  // Toronto Pearson
-      CYQA: [44.974, -79.303]   // Muskoka
-      // CYTZ excluded unless added in fetch script
+      // Ontario
+      CYER:[56.018,-87.676], CYAT:[52.927,-82.431], CYMO:[51.291,-80.607],
+      CYPL:[51.446,-90.214], CYQT:[48.371,-89.324], CYAM:[46.485,-84.509],
+      CYTS:[48.569,-81.377], CYSB:[46.625,-80.798], CYYB:[46.363,-79.422],
+      CYOW:[45.322,-75.669], CYGK:[44.225,-76.596], CYQG:[42.275,-82.955],
+      CYVV:[44.746,-81.107], CYYZ:[43.677,-79.624], CYQA:[44.974,-79.303],
+      // British Columbia
+      CYVR:[49.196,-123.181], CYYJ:[48.647,-123.426], CYLW:[49.956,-119.378],
+      CYXS:[53.889,-122.679], CYXT:[54.468,-128.576], CYQQ:[49.710,-124.886],
+      // Alberta
+      CYYC:[51.113,-114.020], CYEG:[53.310,-113.579], CYMM:[56.653,-111.222],
+      CYQF:[52.182,-113.894],
+      // Saskatchewan/Manitoba
+      CYXE:[52.170,-106.700], CYQR:[50.433,-104.666], CYWG:[49.910,-97.239],
+      CYBR:[49.909,-99.951],
+      // Quebec
+      CYUL:[45.470,-73.741], CYHU:[45.517,-73.417], CYQB:[46.791,-71.393],
+      CYVO:[48.053,-77.782], CYUY:[48.206,-78.835], CYZV:[50.223,-66.266],
+      CYBC:[49.132,-68.204], CYRJ:[48.520,-72.266],
+      // Atlantic
+      CYHZ:[44.881,-63.509], CYYG:[46.290,-63.121], CYQM:[46.113,-64.678],
+      CYFC:[45.868,-66.537], CYYT:[47.618,-52.751], CYQY:[46.161,-60.048],
+      // Territories/North
+      CYXY:[60.710,-135.067], CYZF:[62.463,-114.440], CYFB:[63.756,-68.556],
+      CYRT:[62.811,-92.115], CYBK:[64.298,-96.077], CYRB:[74.717,-94.969],
+      CYCO:[67.817,-115.143]
     };
 
     function categoryColor(cat) {
@@ -85,10 +96,9 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
-
     const bounds = L.latLngBounds([]);
 
-    // Use cleaned dataset
+    // Load cleaned dataset
     Papa.parse("clean_metars.csv", {
       download: true,
       header: true,
@@ -96,9 +106,8 @@
         const rows = results.data.filter(r => r.icao && r.observed_utc);
         const latestByAirport = {};
 
-        // pick most recent per airport
+        // Pick most recent per airport
         rows.forEach(r => {
-          if (!r.icao) return;
           if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
             latestByAirport[r.icao] = r;
           }
@@ -131,10 +140,11 @@
           bounds.extend([lat, lon]);
         });
 
+        // Zoom to show all airports
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [40, 40] });
+          map.fitBounds(bounds, { padding: [50, 50] });
         } else {
-          map.setView([47.5, -80], 5); // fallback: center Ontario
+          map.setView([55, -96], 4); // fallback: center of Canada
         }
       }
     });
