@@ -16,16 +16,24 @@
     body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
     #map { width: 100%; height: 100%; }
 
-    /* Legend */
+    /* Legend container */
     .legend {
       position: absolute;
-      bottom: 15px;
-      left: 15px;
+      top: 15px;
+      right: 15px;
       background: white;
       padding: 10px 14px;
       border-radius: 6px;
       font-size: 0.9rem;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      max-height: 220px;
+      overflow: hidden;
+    }
+    .legend.collapsed {
+      max-height: 30px;
+      padding: 6px 10px;
+      cursor: pointer;
     }
     .legend span { display: flex; align-items: center; margin-bottom: 5px; }
     .dot {
@@ -37,25 +45,25 @@
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
 
-    /* Collapsible legend for mobile */
-    @media (max-width: 768px) {
-      .legend { max-height: 40px; overflow: hidden; cursor: pointer; }
-      .legend.expanded { max-height: 200px; }
-      .legend::after {
-        content: "▲ Legend";
-        display: block;
-        text-align: center;
-        font-size: 0.8rem;
-        margin-top: 4px;
-        color: #555;
-      }
-      .legend.expanded::after { content: "▼ Hide Legend"; }
+    /* Toggle button */
+    .legend-toggle {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #eee;
+      border: none;
+      border-radius: 50%;
+      width: 20px; height: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="legend">
+  <div class="legend" id="legend">
+    <button class="legend-toggle" id="legendToggle">–</button>
     <span><span class="dot dot-vfr"></span> VFR</span>
     <span><span class="dot dot-mvfr"></span> MVFR</span>
     <span><span class="dot dot-ifr"></span> IFR</span>
@@ -63,7 +71,7 @@
   </div>
 
   <script>
-    // Airport coordinates (updated list of 15)
+    // Airport coordinates (updated set of 15)
     const airports = {
       CYER: [56.018, -87.676],  // Fort Severn
       CYMO: [51.291, -80.607],  // Moosonee
@@ -139,12 +147,12 @@
       }
     });
 
-    // Toggle legend for mobile
-    const legend = document.querySelector('.legend');
-    legend.addEventListener('click', () => {
-      if (window.innerWidth <= 768) {
-        legend.classList.toggle('expanded');
-      }
+    // Toggle legend open/close
+    const legend = document.getElementById('legend');
+    const toggle = document.getElementById('legendToggle');
+    toggle.addEventListener('click', () => {
+      legend.classList.toggle('collapsed');
+      toggle.textContent = legend.classList.contains('collapsed') ? "+" : "–";
     });
   </script>
 </body>
