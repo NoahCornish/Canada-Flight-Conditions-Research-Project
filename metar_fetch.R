@@ -9,9 +9,21 @@
 
 # ---------------- User Settings ----------------
 STATIONS <- c(
-  "CYER","CYAT","CYMO","CYPL","CYQT",
-  "CYAM","CYTS","CYSB","CYYB","CYOW",
-  "CYGK","CYQG","CYVV","CYYZ","CYQA"
+  # Ontario (15)
+  "CYER","CYAT","CYMO","CYPL","CYQT","CYAM","CYTS","CYSB","CYYB","CYOW",
+  "CYGK","CYQG","CYVV","CYYZ","CYQA",
+  # British Columbia (6)
+  "CYVR","CYYJ","CYLW","CYXS","CYXT","CYQQ",
+  # Alberta (4)
+  "CYYC","CYEG","CYMM","CYQF",
+  # Saskatchewan / Manitoba (4)
+  "CYXE","CYQR","CYWG","CYBR",
+  # Quebec (8)
+  "CYUL","CYHU","CYQB","CYVO","CYUY","CYZV","CYBC","CYRJ",
+  # Atlantic (6)
+  "CYHZ","CYYG","CYQM","CYFC","CYYT","CYQY",
+  # Territories / North (7)
+  "CYXY","CYZF","CYFB","CYRT","CYBK","CYRB","CYCO"
 )
 
 MASTER_FILE <- "all_metars.csv"
