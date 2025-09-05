@@ -1,0 +1,52 @@
+name: 📊 Analyze & Chart METAR Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 5 * * *"   # 01:30 EDT (Toronto time in summer)
+ #  - cron: "30 6 * * *"   # 01:30 EST (Toronto time in winter)
+
+permissions:
+  contents: write
+
+jobs:
+  analyze-chart:
+    name: 📈 Run Analysis and Generate Charts
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/tidyverse:4.3.3
+
+    steps:
+      - name: 🛎️ Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Install required R packages
+        run: |
+          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate","readr","ggplot2");
+                       missing <- need[!(need %in% rownames(installed.packages()))];
+                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org")'
+
+      - name: 📝 Run analysis (daily averages + flight summary + time in categories)
+        run: Rscript analysis.R
+
+      - name: 🎨 Run charts generator
+        run: Rscript charts.R
+
+      - name: 💾 Commit and push results (CSV + charts)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory $PWD
+          
+          git add time_alltime.csv daily_averages.csv flight_summary.csv charts/*.png || true
+          git status
+          git diff --cached --stat
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Auto-update analysis + charts $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
+          else
+            echo "No changes to commit."
+          fi
