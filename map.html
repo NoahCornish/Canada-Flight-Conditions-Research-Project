@@ -13,21 +13,24 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; font-family: "Segoe UI", Roboto, sans-serif; background: #f9f9f9; }
+    body, html { margin: 0; padding: 0; height: 100%; font-family: "Segoe UI", Roboto, sans-serif; background: #f4f6f9; }
 
-    /* Header bar */
+    /* Header */
     header {
       background: #1f2a44;
       color: white;
-      padding: 12px 20px;
+      padding: 12px 16px;
       text-align: center;
       font-size: 1.2rem;
       font-weight: bold;
       letter-spacing: 0.5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 1000;
     }
 
     /* Map container */
-    #map { width: 100%; height: calc(100% - 60px); }
+    #map { width: 100%; height: calc(100% - 55px); }
 
     /* Legend */
     .legend {
@@ -40,6 +43,8 @@
       font-size: 0.9rem;
       line-height: 1.4;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      transition: max-height 0.3s ease;
+      overflow: hidden;
     }
     .legend h4 {
       margin: 0 0 6px;
@@ -57,7 +62,30 @@
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
 
-    /* Popup styling */
+    /* Toggle button (only visible on mobile) */
+    .legend-toggle {
+      display: none;
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: #1f2a44;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+      .legend { max-height: 0; padding: 0 14px; }
+      .legend.open { max-height: 200px; padding: 10px 14px; }
+      .legend-toggle { display: block; }
+    }
+
+    /* Popups */
     .leaflet-popup-content {
       font-size: 0.9rem;
       font-weight: 500;
@@ -74,6 +102,10 @@
   <header>🌤️ Ontario METAR Flight Conditions</header>
   <div id="map"></div>
 
+  <!-- Toggle button for mobile -->
+  <button class="legend-toggle">Legend</button>
+
+  <!-- Legend box -->
   <div class="legend">
     <h4>Flight Categories</h4>
     <span><span class="dot dot-vfr"></span> VFR – Visual</span>
@@ -83,7 +115,7 @@
   </div>
 
   <script>
-    // Airport coordinates + friendly names
+    // Airport coordinates + names
     const airports = {
       CYER: { coords: [56.0, -87.7], name: "Fort Severn" },
       CYMO: { coords: [51.291, -80.607], name: "Moosonee" },
@@ -103,7 +135,7 @@
       CYQA: { coords: [44.974, -79.303], name: "Muskoka" }
     };
 
-    // Colors for categories
+    // Category colors
     function categoryColor(cat) {
       switch(cat) {
         case "VFR": return "#2ecc71";
@@ -114,7 +146,7 @@
       }
     }
 
-    // Initialize map
+    // Map init
     const map = L.map('map').setView([47.5, -82.5], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
@@ -158,6 +190,13 @@
           `);
         });
       }
+    });
+
+    // Legend toggle (mobile only)
+    const legend = document.querySelector('.legend');
+    const toggle = document.querySelector('.legend-toggle');
+    toggle.addEventListener('click', () => {
+      legend.classList.toggle('open');
     });
   </script>
 </body>
