@@ -1,26 +1,24 @@
-name: 🌤️ Fetch and Save METARs (Every 10 Minutes)
+name: 🌤️ Fetch METARs (Every 10 Minutes)
 
 on:
   schedule:
-    - cron: "*/10 * * * *"     # Run every 10 minutes (UTC)
-  workflow_dispatch:            # Allow manual trigger from GitHub UI
+    - cron: "*/10 * * * *"   # Run every 10 minutes (UTC)
+  workflow_dispatch:          # Allow manual trigger from GitHub UI
 
 permissions:
-  contents: write               # allow pushing to repo
-  issues: write                 # allow posting notifications as issue comments
+  contents: write             # allow pushing updated CSVs/logs
+  issues: write               # allow posting notifications as comments
 
 concurrency:
   group: metar-scheduler
   cancel-in-progress: true
 
 jobs:
-  fetch:
-    name: 📡 Fetch and Archive METAR Data
+  run-r:
+    name: 📡 Fetch and Save METARs
     runs-on: ubuntu-latest
-
-    # Use rocker image (R + tidyverse + httr/jsonlite/lubridate preinstalled)
     container:
-      image: rocker/tidyverse:4.3.3
+      image: rocker/tidyverse:4.3.3   # R + Git + tidyverse already preinstalled
 
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
@@ -29,21 +27,21 @@ jobs:
 
     steps:
       # ------------------------------------------------------------
-      - name: 🛎️ Step 1 – Checkout repository
+      - name: 🛎️ Step 1 – Check out the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          persist-credentials: true
+          fetch-depth: 0             # full history so git push works
+          persist-credentials: true  # keep credentials for push
 
       # ------------------------------------------------------------
-      - name: 📦 Step 2 – Ensure R packages available
+      - name: 📦 Step 2 – Ensure required R packages are installed
         run: |
-          Rscript -e 'pkgs <- c("httr","jsonlite","tibble","dplyr","lubridate");
-                      missing <- pkgs[!pkgs %in% rownames(installed.packages())];
-                      if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
+          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate");
+                       missing <- need[!(need %in% rownames(installed.packages()))];
+                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
 
       # ------------------------------------------------------------
-      - name: 📝 Step 3 – Run METAR fetch + save script
+      - name: 📝 Step 3 – Run the METAR fetch script
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
@@ -54,7 +52,7 @@ jobs:
 
           # Stage monster file, monthly archives, and logs
           git add saved_METARs.csv metars_*.csv metar_log.txt || true
-
+          
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             git push
@@ -63,12 +61,10 @@ jobs:
           fi
 
       # ------------------------------------------------------------
-      - name: ⏱️ Step 5 – Capture current timestamp (EDT/EST)
+      - name: ⏱️ Step 5 – Capture current timestamp (UTC)
         id: ts
         if: always()
-        run: |
-          # Convert to America/Toronto timezone for logs
-          echo "now=$(TZ=America/Toronto date '+%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
+        run: echo "now=$(date -u +'%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
 
       # ------------------------------------------------------------
       - name: 🔔 Step 6 – Post run status as GitHub issue comment
@@ -81,7 +77,7 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // Find or create notification thread
+            // Find or create notification issue
             const { data: issues } = await github.rest.issues.listForRepo({
               owner, repo, state: "open", per_page: 100
             });
@@ -89,21 +85,24 @@ jobs:
             if (!thread) {
               const created = await github.rest.issues.create({
                 owner, repo, title,
-                body: "This thread will log every METAR workflow run."
+                body: "This thread will receive notifications for each METAR workflow run."
               });
               thread = created.data;
             }
 
             const status = "${{ job.status }}";
             const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const sha = "${{ github.sha }}".substring(0,7);
+            const branch = "${{ github.ref_name }}";
             const when = "${{ steps.ts.outputs.now }}";
 
             const body = [
               `@${mention} **METAR job ${status.toUpperCase()}**`,
-              `• Repo: ${{ github.repository }}`,
-              `• Branch: ${{ github.ref_name }}`,
-              `• Time (Local EDT/EST): ${when}`,
-              `• CSV Updated: saved_METARs.csv`,
+              `• **Repo:** ${{ github.repository }}`,
+              `• **Branch:** ${branch}`,
+              `• **Commit:** ${sha}`,
+              `• **Time (UTC):** ${when}`,
+              `• **Files Updated:** saved_METARs.csv + monthly archives + log file`,
               ``,
               `[🔗 View run logs](${runUrl})`
             ].join("\n");
