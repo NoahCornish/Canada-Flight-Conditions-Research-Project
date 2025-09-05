@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Ontario METAR Map</title>
+  <title>Ontario METAR Flight Conditions Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS/JS -->
@@ -13,75 +13,97 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; }
-    #map { width: 100%; height: 100%; }
+    body, html { margin: 0; padding: 0; height: 100%; font-family: "Segoe UI", Roboto, sans-serif; background: #f9f9f9; }
+
+    /* Header bar */
+    header {
+      background: #1f2a44;
+      color: white;
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    /* Map container */
+    #map { width: 100%; height: calc(100% - 60px); }
 
     /* Legend */
     .legend {
       position: absolute;
-      bottom: 15px;
-      left: 15px;
+      bottom: 20px;
+      left: 20px;
       background: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .legend h4 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #333;
     }
     .legend span { display: flex; align-items: center; margin-bottom: 4px; }
     .dot {
-      width: 12px; height: 12px; border-radius: 50%;
-      display: inline-block; margin-right: 6px;
+      width: 14px; height: 14px; border-radius: 50%;
+      display: inline-block; margin-right: 8px;
     }
     .dot-vfr { background: #2ecc71; }
     .dot-mvfr { background: #3498db; }
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
+
+    /* Popup styling */
+    .leaflet-popup-content {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    /* Marker hover effect */
+    .leaflet-interactive:hover {
+      stroke: #000 !important;
+      stroke-width: 2 !important;
+    }
   </style>
 </head>
 <body>
+  <header>🌤️ Ontario METAR Flight Conditions</header>
   <div id="map"></div>
+
   <div class="legend">
-    <span><span class="dot dot-vfr"></span> VFR</span>
-    <span><span class="dot dot-mvfr"></span> MVFR</span>
-    <span><span class="dot dot-ifr"></span> IFR</span>
-    <span><span class="dot dot-lifr"></span> LIFR</span>
+    <h4>Flight Categories</h4>
+    <span><span class="dot dot-vfr"></span> VFR – Visual</span>
+    <span><span class="dot dot-mvfr"></span> MVFR – Marginal Visual</span>
+    <span><span class="dot dot-ifr"></span> IFR – Instrument</span>
+    <span><span class="dot dot-lifr"></span> LIFR – Low Instrument</span>
   </div>
 
   <script>
-    // Airport coordinates (15 selected for study)
+    // Airport coordinates + friendly names
     const airports = {
-      // --- Far North / James Bay ---
-      CYER: [56.0, -87.7],   // Fort Severn
-      CYMO: [51.291, -80.607],  // Moosonee
-      CYPL: [51.446, -90.214],  // Pickle Lake
-
-      // --- Northwest / Lake Superior ---
-      CYQT: [48.371, -89.324],  // Thunder Bay
-      CYAM: [46.485, -84.509],  // Sault Ste. Marie
-
-      // --- Northeast Corridor ---
-      CYTS: [48.569, -81.377],  // Timmins
-      CYSB: [46.625, -80.798],  // Sudbury
-      CYYB: [46.363, -79.422],  // North Bay
-
-      // --- Eastern Ontario ---
-      CYOW: [45.322, -75.669],  // Ottawa
-      CYGK: [44.225, -76.596],  // Kingston
-
-      // --- Southwest / Central ---
-      CYQG: [42.275, -82.955],  // Windsor
-      CYOS: [44.590, -80.837],  // Owen Sound
-      CYHM: [43.163, -79.934],  // Hamilton
-
-      // --- Greater Toronto Area ---
-      CYYZ: [43.677, -79.624],  // Toronto Pearson
-      CYTZ: [43.627, -79.396],  // Toronto Billy Bishop
-
-      // --- Central Ontario ---
-      CYQA: [44.974, -79.303]   // Muskoka
+      CYER: { coords: [56.0, -87.7], name: "Fort Severn" },
+      CYMO: { coords: [51.291, -80.607], name: "Moosonee" },
+      CYPL: { coords: [51.446, -90.214], name: "Pickle Lake" },
+      CYQT: { coords: [48.371, -89.324], name: "Thunder Bay" },
+      CYAM: { coords: [46.485, -84.509], name: "Sault Ste. Marie" },
+      CYTS: { coords: [48.569, -81.377], name: "Timmins" },
+      CYSB: { coords: [46.625, -80.798], name: "Sudbury" },
+      CYYB: { coords: [46.363, -79.422], name: "North Bay" },
+      CYOW: { coords: [45.322, -75.669], name: "Ottawa" },
+      CYGK: { coords: [44.225, -76.596], name: "Kingston" },
+      CYQG: { coords: [42.275, -82.955], name: "Windsor" },
+      CYOS: { coords: [44.590, -80.837], name: "Owen Sound" },
+      CYHM: { coords: [43.163, -79.934], name: "Hamilton" },
+      CYYZ: { coords: [43.677, -79.624], name: "Toronto Pearson" },
+      CYTZ: { coords: [43.627, -79.396], name: "Toronto Billy Bishop" },
+      CYQA: { coords: [44.974, -79.303], name: "Muskoka" }
     };
 
-    // Colors for flight categories
+    // Colors for categories
     function categoryColor(cat) {
       switch(cat) {
         case "VFR": return "#2ecc71";
@@ -98,7 +120,7 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Load CSV and plot markers
+    // Load CSV and plot
     Papa.parse("saved_METARs.csv", {
       download: true,
       header: true,
@@ -115,20 +137,20 @@
 
         Object.entries(latestByAirport).forEach(([icao, r]) => {
           if (!airports[icao]) return;
-          const [lat, lon] = airports[icao];
+          const { coords, name } = airports[icao];
           const color = categoryColor(r.flight_category);
 
-          const marker = L.circleMarker([lat, lon], {
-            radius: 8,
+          const marker = L.circleMarker(coords, {
+            radius: 9,
             fillColor: color,
             color: "#333",
             weight: 1,
             opacity: 1,
-            fillOpacity: 0.9
+            fillOpacity: 0.95
           }).addTo(map);
 
           marker.bindPopup(`
-            <strong>${icao}</strong><br>
+            <strong>${name} (${icao})</strong><br>
             Category: <span style="color:${color}; font-weight:bold">${r.flight_category}</span><br>
             Temp: ${r.temp_c}°C<br>
             Wind: ${r.wind_dir_deg}° @ ${r.wind_kts} kts<br>
