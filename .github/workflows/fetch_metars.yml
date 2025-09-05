@@ -44,14 +44,15 @@ jobs:
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
-      - name: 💾 Step 4 – Commit and push updated CSV (if changed)
+        - name: 💾 Step 4 – Commit and push updated CSV (if changed)
         run: |
-          git config --global --add safe.directory $GITHUB_WORKSPACE
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if [ -n "$(git status --porcelain saved_METARs.csv)" ]; then
-            git add saved_METARs.csv
+          # Stage all generated files
+          git add saved_METARs.csv metars_*.csv metar_log.txt || true
+
+          if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             git push
           else
