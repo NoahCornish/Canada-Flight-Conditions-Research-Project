@@ -75,6 +75,7 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.1);
       transition: transform 0.15s;
       cursor: pointer;
+      text-align: center;
     }
     .card:hover { transform: translateY(-3px); }
 
@@ -88,6 +89,40 @@
     .temp { font-size: 1.1rem; font-weight: 500; }
     .humidity { font-size: 0.85rem; color: #666; }
     .obs-time { font-size: 0.75rem; color: #777; margin-top: 6px; }
+
+    /* Wind compass */
+    .wind { font-size: 0.8rem; margin-top: 6px; }
+    .wind-compass {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 6px auto;
+      border: 2px solid #bbb;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      color: #555;
+    }
+    .wind-compass .label {
+      position: absolute;
+      font-weight: bold;
+    }
+    .wind-compass .N { top: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .S { bottom: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .E { right: 2px; top: 50%; transform: translateY(-50%); }
+    .wind-compass .W { left: 2px; top: 50%; transform: translateY(-50%); }
+
+    .wind-arrow {
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 28px solid;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: center center;
+      transform: translate(-50%, -50%);
+    }
 
     /* Modal */
     .modal {
@@ -108,6 +143,7 @@
       max-width: 600px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       font-size: 0.95rem;
+      position: relative;
     }
     .modal h3 { margin-top: 0; font-size: 1.3rem; border-bottom: 2px solid #eee; padding-bottom: 0.4rem; }
     .close-btn {
@@ -120,8 +156,6 @@
     }
     .close-btn:hover { color: #000; }
 
-    .detail-row { display: flex; justify-content: space-between; margin: 6px 0; }
-    .label { font-weight: 600; color: #333; }
     .raw-section { margin-top: 1rem; font-size: 0.85rem; background: #f8f9fa; padding: 0.8rem; border-radius: 6px; font-family: monospace; white-space: pre-wrap; }
   </style>
 </head>
@@ -179,14 +213,13 @@
       document.getElementById("modalTitle").textContent = title;
 
       let details = `
-        <div class="detail-row"><span class="label">Flight Rules:</span> ${r.flight_category}</div>
-        <div class="detail-row"><span class="label">Observed:</span> ${toEDT(r.observed_utc)}</div>
-        <div class="detail-row"><span class="label">Temp:</span> ${r.temp_c} °C</div>
-        <div class="detail-row"><span class="label">Dew Point:</span> ${r.dewpoint_c} °C</div>
-        <div class="detail-row"><span class="label">Humidity:</span> ${r.rh_percent}%</div>
-        <div class="detail-row"><span class="label">Wind:</span> ${r.wind_dir_deg}° @ ${r.wind_kts} kts</div>
-        <div class="detail-row"><span class="label">Altimeter:</span> ${r.altimeter_hg} inHg</div>
-        <div class="detail-row"><span class="label">Conditions:</span> ${r.conditions || "—"}</div>
+        <div><strong>Observed:</strong> ${toEDT(r.observed_utc)}</div>
+        <div><strong>Flight Rules:</strong> ${r.flight_category}</div>
+        <div><strong>Temp:</strong> ${r.temp_c} °C | <strong>Dew Point:</strong> ${r.dewpoint_c} °C</div>
+        <div><strong>Humidity:</strong> ${r.rh_percent}%</div>
+        <div><strong>Wind:</strong> ${r.wind_dir_deg}° @ ${r.wind_kts} kts</div>
+        <div><strong>Altimeter:</strong> ${r.altimeter_hg} inHg</div>
+        <div><strong>Conditions:</strong> ${r.conditions || "—"}</div>
       `;
       document.getElementById("modalDetails").innerHTML = details;
       document.getElementById("modalRaw").textContent = r.raw_text || "No raw METAR available";
@@ -222,14 +255,28 @@
 
         const grid = document.getElementById("airportGrid");
         Object.values(latestByAirport).forEach(r => {
+          const speed = parseInt(r.wind_kts) || 0;
+          const deg = parseInt(r.wind_dir_deg) || 0;
           const div = document.createElement("div");
           div.className = "card";
           div.innerHTML = `
             <div class="icao">${r.icao}</div>
             <div class="category cat-${r.flight_category}">${r.flight_category}</div>
+            <div class="obs-time">${toEDT(r.observed_utc)}</div>
             <div class="temp">${r.temp_c} °C</div>
             <div class="humidity">💧 ${r.rh_percent}%</div>
-            <div class="obs-time">${toEDT(r.observed_utc)}</div>
+            <div class="wind">
+              <div class="wind-compass">
+                <div class="label N">N</div>
+                <div class="label S">S</div>
+                <div class="label E">E</div>
+                <div class="label W">W</div>
+                <div class="wind-arrow"
+                  style="transform: translate(-50%, -50%) rotate(${deg}deg); border-top-color:${windColor(speed)}">
+                </div>
+              </div>
+              ${deg}° @ ${speed} kts
+            </div>
           `;
           div.addEventListener("click", () => {
             showModal(`${r.icao}`, r);
