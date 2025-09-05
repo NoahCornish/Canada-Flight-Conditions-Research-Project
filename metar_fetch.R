@@ -41,7 +41,7 @@ suppressPackageStartupMessages({
 # ---------------- API Key -----------------------
 api_key <- Sys.getenv("CHECKWX_API_KEY", unset=NA)
 if(is.na(api_key) || nchar(api_key)==0){
-  api_key <- "c772ec8a139a4abcab171a94c0"   # fallback
+  #api_key <- "c772ec8a139a4abcab171a94c0"   # fallback
 }
 if(is.na(api_key) || nchar(api_key)==0) stop("❌ No API key available")
 
