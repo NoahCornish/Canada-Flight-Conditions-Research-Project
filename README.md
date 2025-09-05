@@ -9,25 +9,47 @@ Data collection and processing are fully automated with **R scripts** and **GitH
 ---
 
 ## ✈️ Airports Covered
-Fifteen airports were chosen to maximize **geographic spread** across Ontario:  
+Fifteen airports were chosen to maximize **geographic spread** across Ontario:
 
-- **Far North:** CYMO (Moosonee), CYPL (Pickle Lake)  
-- **Northeast Corridor:** CYTS (Timmins), CYSB (Sudbury), CYYB (North Bay)  
-- **Northwest:** CYQT (Thunder Bay)  
-- **Eastern Ontario:** CYOW (Ottawa), CYGK (Kingston)  
-- **Southwest Ontario:** CYQG (Windsor), CYXU (London), CYHM (Hamilton)  
-- **Greater Toronto Area:** CYYZ (Toronto Pearson), CYTZ (Billy Bishop), CYOO (Oshawa)  
-- **Central Ontario:** CYQA (Muskoka)  
+- **Far North:**  
+  - CYER – Fort Severn (Hudson Bay, northernmost community)  
+  - CYMO – Moosonee (James Bay access)  
+  - CYPL – Pickle Lake (remote hub for northern communities)  
 
-This mix balances **major hubs**, **regional centers**, and **remote northern airports**.
+- **Northwest Ontario:**  
+  - CYQT – Thunder Bay (largest NW Ontario hub)  
+  - CYAM – Sault Ste. Marie (Lake Superior mid-point)  
+
+- **Northeast Corridor:**  
+  - CYTS – Timmins (mining/forestry hub)  
+  - CYSB – Sudbury (largest Northern Ontario city)  
+  - CYYB – North Bay (transition between north & south)  
+
+- **Eastern Ontario:**  
+  - CYOW – Ottawa (national capital)  
+  - CYGK – Kingston (Lake Ontario east-end)  
+
+- **Southwest / Central Ontario:**  
+  - CYQG – Windsor (border city, Detroit proximity)  
+  - CYOS – Owen Sound (Georgian Bay region, Lake Huron influence)  
+  - CYHM – Hamilton (southern Ontario cargo hub)  
+
+- **Greater Toronto Area:**  
+  - CYYZ – Toronto Pearson (busiest airport in Canada)  
+  - CYTZ – Billy Bishop (downtown Toronto, lake effect contrast)  
+
+- **Central Ontario:**  
+  - CYQA – Muskoka (recreational/cottage country)  
+
+This mix balances **major hubs**, **regional centers**, and **remote northern airports** to capture Ontario’s full climatological diversity.
 
 ---
 
 ## ⚙️ How It Works
-- **Script:** [`metar_fetch.R`](metar_fetch.R) calls the API every 10 minutes.  
-- **Data:** Extracts ICAO, time, flight category, temp/dewpoint, humidity, wind, visibility, altimeter, and raw METAR.  
-- **Storage:** Appends results to `saved_METARs.csv` with duplicates removed (`icao + observed_utc`).  
-- **Automation:** A GitHub Actions workflow runs on schedule, commits new data, and notifies the maintainer.  
+- **Script:** [`metar_fetch.R`](metar_fetch.R) queries the CheckWX API every 10 minutes.  
+- **Data Extracted:** ICAO, timestamp, flight category, temperature, humidity, wind, visibility, altimeter, and raw METAR.  
+- **Storage:** Appends results to `saved_METARs.csv` (with monthly archives). Duplicate entries (`icao + observed_utc`) are filtered.  
+- **Automation:** A GitHub Actions workflow handles scheduling, data commits, and notifications to the maintainer.  
 
 ---
 
@@ -39,7 +61,7 @@ Flight categories are tracked using FAA/ICAO definitions:
 - **VFR** – ceilings > 3,000 ft and visibility > 5 SM  
 
 The dataset will support:  
-- Daily/seasonal stats  
+- Daily and seasonal statistics  
 - Airport-to-airport comparisons  
 - Identifying fog/low visibility patterns  
 - Long-term climatology and aviation research  
@@ -57,4 +79,7 @@ The dataset will support:
 ---
 
 ## 🔑 Key Point
-This is a **long-term project**. Full yearly climatology requires at least **12 months** of data, but meaningful patterns will start emerging after **2–3 months**. With each additional year, the dataset becomes **more powerful and credible** for aviation safety, training, and research.
+This is a **long-term climatology project**.  
+- Full yearly insights require at least **12 months** of data.  
+- Meaningful early comparisons begin after **2–3 months**.  
+- With each additional year, the dataset becomes **more powerful and credible** for aviation safety, training, and research.  
