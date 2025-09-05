@@ -14,36 +14,40 @@
 # ------------------------------------------------------------------------------
 
 # ----------------------- User settings ----------------------
-# Ontario Airports Selected for Maximum Geographic Spread (15 total)
+# Ontario Airports – Balanced Geographic Spread (15 total)
 STATIONS <- c(
-  # --- Far North / James Bay ---
-  "CYMO", # Moosonee – access point for James Bay communities
-  "CYPL", # Pickle Lake – remote northern Ontario hub
+  # --- Far North / Hudson Bay ---
+  "CYER", # Fort Severn – northernmost, Hudson Bay
+  "CYMO", # Moosonee – James Bay access
 
-  # --- Northeast Corridor ---
-  "CYTS", # Timmins – major hub
-  "CYSB", # Sudbury – largest Northern Ontario city
-  "CYYB", # North Bay – transition north/south
+  # --- Remote North Hub ---
+  "CYPL", # Pickle Lake – northern hub
 
   # --- Northwest Ontario ---
-  "CYQT", # Thunder Bay – largest NW Ontario hub
+  "CYQT", # Thunder Bay – NW anchor
+  "CYAM", # Sault Ste. Marie – Lake Superior mid-point
+
+  # --- Northeast Corridor ---
+  "CYTS", # Timmins – NE mining/forestry hub
+  "CYSB", # Sudbury – largest Northern Ontario city
+  "CYYB", # North Bay – north/south transition
 
   # --- Eastern Ontario ---
-  "CYOW", # Ottawa – international hub
+  "CYOW", # Ottawa – national capital
   "CYGK", # Kingston – Lake Ontario east-end
 
   # --- Southwest Ontario ---
-  "CYQG", # Windsor – border city
-  "CYXU", # London – large SW Ontario airport
-  "CYHM", # Hamilton – southern Ontario cargo hub
+  "CYQG", # Windsor – Detroit border, lake-effect
+  "CYZR", # Sarnia – Lake Huron region
 
   # --- Greater Toronto Area ---
-  "CYYZ", # Toronto Pearson – busiest airport in Canada
-  "CYTZ", # Billy Bishop – downtown Toronto
-  "CYOO", # Oshawa – eastern GTA
+  "CYYZ", # Toronto Pearson – GTA anchor
 
   # --- Central Ontario / Cottage Country ---
-  "CYQA"  # Muskoka – cottage/recreational region
+  "CYQA", # Muskoka – recreational region
+
+  # --- Special Contrast ---
+  "CYTZ"  # Billy Bishop – downtown Toronto, lake effect
 )
 
 OUTFILE_MONSTER <- "saved_METARs.csv"   # Master archive
