@@ -2,32 +2,123 @@ name: 🌤️ Fetch METARs (Every 10 Minutes)
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 * * * *"   # every 10 min UTC
   workflow_dispatch:
 
 permissions:
   contents: write
+  issues: write
+
+concurrency:
+  group: metar-fetch
+  cancel-in-progress: true
 
 jobs:
-  fetch:
+  run-r:
+    name: 📡 Fetch and Save METARs
     runs-on: ubuntu-latest
     container:
       image: rocker/tidyverse:4.3.3
+
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
+      MENTION_USER: "NoahCornish"
+      NOTIFY_ISSUE_TITLE: "📣 METAR Run Notifications"
+
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - name: Run fetch script
+      - name: 🔍 Step 0 – Full Debug (before checkout)
+        run: |
+          echo "=== START DEBUG INFO ==="
+          pwd
+          ls -la
+          git --version || echo "Git not found"
+          echo "=== END DEBUG INFO ==="
+
+      - name: 🛎️ Step 1 – Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: 🔍 Step 2 – Debug after checkout
+        run: |
+          echo "=== DEBUG AFTER CHECKOUT ==="
+          pwd
+          ls -la
+          git config --global --add safe.directory $PWD
+          git status
+          echo "============================="
+
+      - name: 📦 Step 3 – Ensure required R packages are installed
+        run: |
+          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate");
+                       missing <- need[!(need %in% rownames(installed.packages()))];
+                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
+
+      - name: 📝 Step 4 – Run the METAR fetch script
         run: Rscript metar_fetch.R
-      - name: Commit & Push
+
+      - name: 💾 Step 5 – Commit and push updated data files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory $PWD
+          
           git add all_metars*.csv metar_log.txt || true
+          git status
+          git diff --cached --stat
+          
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "Update METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             git push
           else
             echo "No changes to commit."
           fi
+
+      - name: ⏱️ Step 6 – Capture current timestamp (UTC)
+        id: ts
+        if: always()
+        run: echo "now=$(date -u +'%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
+
+      - name: 🔔 Step 7 – Post run status as GitHub issue comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = process.env.NOTIFY_ISSUE_TITLE;
+            const mention = process.env.MENTION_USER;
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: "open", per_page: 100
+            });
+            let thread = issues.find(i => i.title === title);
+            if (!thread) {
+              const created = await github.rest.issues.create({
+                owner, repo, title,
+                body: "This thread will receive notifications for each METAR workflow run."
+              });
+              thread = created.data;
+            }
+
+            const status = "${{ job.status }}";
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const sha = "${{ github.sha }}".substring(0,7);
+            const branch = "${{ github.ref_name }}";
+            const when = "${{ steps.ts.outputs.now }}";
+
+            const body = [
+              `@${mention} **METAR job ${status.toUpperCase()}**`,
+              `• **Repo:** ${{ github.repository }}`,
+              `• **Branch:** ${branch}`,
+              `• **Commit:** ${sha}`,
+              `• **Time (UTC):** ${when}`,
+              `• **Files Updated:** all_metars.csv + monthly archives + log file`,
+              ``,
+              `[🔗 View run logs](${runUrl})`
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: thread.number, body
+            })
