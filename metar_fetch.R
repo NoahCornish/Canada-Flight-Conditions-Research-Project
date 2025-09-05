@@ -172,13 +172,13 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
   if (append_mode && file.exists(outfile_monster)) {
     existing <- tryCatch(read.csv(outfile_monster, stringsAsFactors=FALSE), error=function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz="UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
-      existing$observed_local <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$observed_utc    <- as.POSIXct(existing$observed_utc, tz="UTC")
+      existing$fetched_at_utc  <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local  <- with_tz(existing$observed_utc,"America/Toronto")
       existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
-        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
+        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)   # <-- dedupe fix
     }
   }
 
@@ -196,13 +196,13 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
   if (file.exists(month_file)) {
     existing <- tryCatch(read.csv(month_file, stringsAsFactors=FALSE), error=function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz="UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
-      existing$observed_local <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$observed_utc    <- as.POSIXct(existing$observed_utc, tz="UTC")
+      existing$fetched_at_utc  <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local  <- with_tz(existing$observed_utc,"America/Toronto")
       existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
-        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
+        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)   # <-- dedupe fix
     }
   }
   write.csv(df, month_file, row.names=FALSE)
