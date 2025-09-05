@@ -170,10 +170,11 @@ write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
       existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
       existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
 
-      # Compare keys (icao + observed + raw_text)
-      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
-      df_new       <- df[!new_key %in% existing_key, ]
+      # Compare keys (icao + observed_utc + raw_text)
+existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
+new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
+df_new       <- df[!new_key %in% existing_key, ]
+
 
       total_new <- total_new + nrow(df_new)
       df <- bind_rows(existing, df_new)
