@@ -200,6 +200,7 @@ write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
       df <- bind_rows(existing, df_new)
     }
   }
+  # Always write monthly file
   utils::write.csv(df, monthly_file, row.names = FALSE)
 
   # ---- Logging ----
