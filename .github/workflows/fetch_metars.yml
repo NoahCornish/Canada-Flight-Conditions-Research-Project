@@ -2,12 +2,12 @@ name: 🌤️ Fetch METARs (Every 10 Minutes)
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # Run every 10 minutes (UTC)
-  workflow_dispatch:          # Allow manual trigger from the GitHub UI
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write             # allow pushing to repo
-  issues: write               # allow posting notifications as issue comments
+  contents: write
+  issues: write
 
 concurrency:
   group: metar-scheduler
@@ -17,11 +17,9 @@ jobs:
   run-r:
     name: 📡 Fetch and Save METARs
     runs-on: ubuntu-latest
-    container:
-      image: rocker/tidyverse:4.3.3   # R + Git + tidyverse preinstalled
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
-      MENTION_USER: "NoahCornish"           # change to whoever you want notified
+      MENTION_USER: "NoahCornish"
       NOTIFY_ISSUE_TITLE: "📣 METAR Run Notifications"
 
     steps:
@@ -29,27 +27,32 @@ jobs:
       - name: 🛎️ Step 1 – Check out the repository with full history
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0           # full history so we have a .git directory
+          fetch-depth: 0
           persist-credentials: true
 
       # ------------------------------------------------------------
-      - name: 📦 Step 2 – Ensure required R package (jsonlite) is installed
+      - name: 📦 Step 2 – Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.3'
+          use-public-rspm: true
+
+      - name: 📦 Step 3 – Install required R package
         run: |
           Rscript -e 'if(!"jsonlite" %in% rownames(installed.packages())) {
                         install.packages("jsonlite", repos="https://cloud.r-project.org", quiet=TRUE)
                       }'
 
       # ------------------------------------------------------------
-      - name: 📝 Step 3 – Run the METAR fetch script
+      - name: 📝 Step 4 – Run the METAR fetch script
         run: Rscript metar_fetch.R
 
       # ------------------------------------------------------------
-      - name: 💾 Step 4 – Commit and push updated data files (if changed)
+      - name: 💾 Step 5 – Commit and push updated data files (if changed)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage all generated files: monster, monthly archives, and logs
           git add saved_METARs.csv metars_*.csv metar_log.txt || true
 
           if [ -n "$(git status --porcelain)" ]; then
@@ -60,13 +63,13 @@ jobs:
           fi
 
       # ------------------------------------------------------------
-      - name: ⏱️ Step 5 – Capture current timestamp (UTC)
+      - name: ⏱️ Step 6 – Capture current timestamp (UTC)
         id: ts
         if: always()
         run: echo "now=$(date -u +'%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
 
       # ------------------------------------------------------------
-      - name: 🔔 Step 6 – Post run status as a GitHub issue comment
+      - name: 🔔 Step 7 – Post run status as a GitHub issue comment
         if: always()
         uses: actions/github-script@v7
         with:
@@ -76,7 +79,6 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // Look for existing issue with the notification title
             const { data: issues } = await github.rest.issues.listForRepo({
               owner, repo, state: "open", per_page: 100
             });
