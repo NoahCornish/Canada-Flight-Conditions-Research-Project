@@ -48,23 +48,37 @@
   </div>
 
   <script>
-    // Airport coordinates
+    // Airport coordinates (15 selected for study)
     const airports = {
+      // --- Far North / James Bay ---
+      CYER: [56.0, -87.7],   // Fort Severn
       CYMO: [51.291, -80.607],  // Moosonee
-      CYYB: [46.363, -79.422],  // North Bay
-      CYOO: [43.922, -78.895],  // Oshawa
-      CYOW: [45.322, -75.669],  // Ottawa
-      CYQG: [42.275, -82.955],  // Windsor
+      CYPL: [51.446, -90.214],  // Pickle Lake
+
+      // --- Northwest / Lake Superior ---
+      CYQT: [48.371, -89.324],  // Thunder Bay
+      CYAM: [46.485, -84.509],  // Sault Ste. Marie
+
+      // --- Northeast Corridor ---
       CYTS: [48.569, -81.377],  // Timmins
       CYSB: [46.625, -80.798],  // Sudbury
+      CYYB: [46.363, -79.422],  // North Bay
+
+      // --- Eastern Ontario ---
+      CYOW: [45.322, -75.669],  // Ottawa
       CYGK: [44.225, -76.596],  // Kingston
-      CYXU: [43.033, -81.151],  // London
+
+      // --- Southwest / Central ---
+      CYQG: [42.275, -82.955],  // Windsor
+      CYOS: [44.590, -80.837],  // Owen Sound
       CYHM: [43.163, -79.934],  // Hamilton
+
+      // --- Greater Toronto Area ---
       CYYZ: [43.677, -79.624],  // Toronto Pearson
       CYTZ: [43.627, -79.396],  // Toronto Billy Bishop
-      CYQA: [44.974, -79.303],  // Muskoka
-      CYPL: [51.446, -90.214],  // Pickle Lake
-      CYQT: [48.371, -89.324]   // Thunder Bay
+
+      // --- Central Ontario ---
+      CYQA: [44.974, -79.303]   // Muskoka
     };
 
     // Colors for flight categories
