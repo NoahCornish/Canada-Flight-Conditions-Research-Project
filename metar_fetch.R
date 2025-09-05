@@ -19,6 +19,7 @@ STATIONS <- c(
   # --- Far North / Hudson Bay ---
   "CYER", # Fort Severn – northernmost, Hudson Bay
   "CYMO", # Moosonee – James Bay access
+  "CYAT", # Attawapiskat – remote James Bay community
 
   # --- Remote North Hub ---
   "CYPL", # Pickle Lake – northern hub
@@ -44,11 +45,9 @@ STATIONS <- c(
   "CYYZ", # Toronto Pearson – GTA anchor
 
   # --- Central Ontario / Cottage Country ---
-  "CYQA", # Muskoka – recreational region
-
-  # --- Special Contrast ---
-  "CYTZ"  # Billy Bishop – downtown Toronto, lake effect
+  "CYQA"  # Muskoka – recreational region
 )
+
 
 OUTFILE_MONSTER <- "saved_METARs.csv"   # Master archive
 LOGFILE         <- "metar_log.txt"      # Run log
