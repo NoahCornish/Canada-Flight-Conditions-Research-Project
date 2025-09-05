@@ -1,11 +1,12 @@
 #!/usr/bin/env Rscript
 # metar_fetch.R
 # Fetch decoded METARs for multiple ICAOs and save:
-#   1) A growing "monster file" (saved_METARs.csv)
-#   2) Monthly archive files (metars_YYYY_MM.csv)
-#   3) A log file (metar_log.txt) with summary of each run
+#   1) Monster file (saved_METARs.csv)
+#   2) Monthly archive (metars_YYYY_MM.csv)
+#   3) Run log (metar_log.txt)
 #
-# API key comes from env var CHECKWX_API_KEY
+# Only logs unique METARs by (icao, observed_utc, raw_text).
+# API key must be set as env var CHECKWX_API_KEY.
 # ------------------------------------------------------------------------------
 
 # ----------------------- User settings ----------------------
@@ -26,8 +27,8 @@ STATIONS <- c(
   "CYQA"
 )
 
-OUTFILE_MONSTER <- "saved_METARs.csv"   # master archive
-LOGFILE         <- "metar_log.txt"      # run log
+OUTFILE_MONSTER <- "saved_METARs.csv"
+LOGFILE         <- "metar_log.txt"
 APPEND_MODE     <- TRUE
 # ------------------------------------------------------------
 
@@ -53,7 +54,7 @@ if (is.na(api_key) || nchar(api_key) == 0) {
        'Sys.setenv(CHECKWX_API_KEY = "YOUR_KEY_HERE")', call. = FALSE)
 }
 
-# Helper: safe extract
+# Safe extractor
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 # Fetch one station
@@ -152,7 +153,7 @@ fetch_all <- function(stations, key) {
   bind_rows(rows) |> arrange(icao, desc(observed_utc))
 }
 
-# Write to monster + monthly archive (only new unique METARs)
+# Write to monster + monthly archive (deduped)
 write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
   col_order <- c(
     "icao","observed_utc","flight_category","temp_c","dewpoint_c","rh_percent",
@@ -166,17 +167,14 @@ write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
   if (append_mode && file.exists(monster_file)) {
     existing <- tryCatch(read.csv(monster_file, stringsAsFactors = FALSE), error = function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      # Convert character back to datetime
       existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
       existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
 
-      # Compare keys (icao + observed_utc + raw_text)
-existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
-df_new       <- df[!new_key %in% existing_key, ]
+      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
+      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
+      df_new       <- df[!new_key %in% existing_key, ]
 
-
-      total_new <- total_new + nrow(df_new)
+      total_new <- nrow(df_new)
       df <- bind_rows(existing, df_new)
     }
   } else {
@@ -205,7 +203,7 @@ df_new       <- df[!new_key %in% existing_key, ]
   utils::write.csv(df, monthly_file, row.names = FALSE)
 
   # ---- Logging ----
-  log_msg <- sprintf("[%s] Added %d new METAR(s)", 
+  log_msg <- sprintf("[%s] Added %d new unique METAR(s)",
                      format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC"), total_new)
   cat(log_msg, "\n", file = log_file, append = TRUE)
   message(log_msg)
