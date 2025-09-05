@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "30 5 * * *"   # 01:30 EDT (Toronto time in summer)
- #  - cron: "30 6 * * *"   # 01:30 EST (Toronto time in winter)
+    # - cron: "30 6 * * *"   # 01:30 EST (Toronto time in winter)
 
 permissions:
   contents: write
@@ -24,7 +24,7 @@ jobs:
 
       - name: 📦 Install required R packages
         run: |
-          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate","readr","ggplot2");
+          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate","readr","ggplot2","maps");
                        missing <- need[!(need %in% rownames(installed.packages()))];
                        if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org")'
 
@@ -34,6 +34,9 @@ jobs:
       - name: 🎨 Run charts generator
         run: Rscript charts.R
 
+      - name: 🗺️ Run README map generator
+        run: Rscript chart_readme.R
+
       - name: 💾 Commit and push results (CSV + charts)
         working-directory: ${{ github.workspace }}
         run: |
@@ -41,7 +44,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add time_alltime.csv daily_averages.csv flight_summary.csv charts/*.png || true
+          git add time_alltime.csv time_daily.csv time_overall.csv overall_percentages.csv daily_averages.csv flight_summary.csv charts/*.png || true
           git status
           git diff --cached --stat
 
@@ -51,4 +54,3 @@ jobs:
           else
             echo "No changes to commit."
           fi
-
