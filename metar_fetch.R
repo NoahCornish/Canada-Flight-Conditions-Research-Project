@@ -150,43 +150,43 @@ fetch_all <- function(stations, key) {
   bind_rows(rows) |> arrange(icao, desc(observed_utc))
 }
 
-# Write to monster + monthly archive
+# Write to monster + monthly archive (only new unique METARs)
 write_csvs <- function(df, monster_file, append_mode = TRUE) {
-  # Ensure consistent column order
   col_order <- c(
     "icao","observed_utc","flight_category","temp_c","dewpoint_c","rh_percent",
     "wind_dir_deg","wind_kts","vis_m","altimeter_hg","raw_text","fetched_at_utc"
   )
-  missing_cols <- setdiff(col_order, names(df))
-  for (mc in missing_cols) df[[mc]] <- NA
   df <- df[, col_order]
 
   # ---- Monster file ----
   if (append_mode && file.exists(monster_file)) {
     existing <- tryCatch(read.csv(monster_file, stringsAsFactors = FALSE), error = function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc <- as.POSIXct(existing$observed_utc, tz = "UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
-      df <- dplyr::bind_rows(existing, df)
+      # Compare against existing, only keep new rows
+      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
+      new_key <- paste(df$icao, df$observed_utc, df$raw_text)
+      df <- df[!new_key %in% existing_key, ]
+      df <- bind_rows(existing, df)
     }
   }
   utils::write.csv(df, monster_file, row.names = FALSE)
-  message(sprintf("Appended to monster file: %s", monster_file))
+  message(sprintf("Updated monster file: %s", monster_file))
 
   # ---- Monthly archive ----
-  month_stamp <- format(Sys.time(), "%Y_%m")  # e.g. 2025_09
+  month_stamp <- format(Sys.time(), "%Y_%m")
   monthly_file <- sprintf("metars_%s.csv", month_stamp)
 
   if (file.exists(monthly_file)) {
     existing <- tryCatch(read.csv(monthly_file, stringsAsFactors = FALSE), error = function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc <- as.POSIXct(existing$observed_utc, tz = "UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
-      df <- dplyr::bind_rows(existing, df)
+      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
+      new_key <- paste(df$icao, df$observed_utc, df$raw_text)
+      df <- df[!new_key %in% existing_key, ]
+      df <- bind_rows(existing, df)
     }
   }
   utils::write.csv(df, monthly_file, row.names = FALSE)
-  message(sprintf("Also saved to monthly file: %s", monthly_file))
+  message(sprintf("Updated monthly file: %s", monthly_file))
 }
 
 # --------------------------- Main ---------------------------
