@@ -243,93 +243,106 @@
   </div>
 
   <script>
-    function toEDT(utcString) {
-      if (!utcString) return "";
-      const date = new Date(utcString + "Z");
-      date.setHours(date.getHours() - 4);
-      return date.toISOString().replace("T", " ").substring(0,16);
-    }
+  function toEDT(utcString) {
+    if (!utcString) return "";
+    const date = new Date(utcString + "Z");
+    date.setHours(date.getHours() - 4);
+    return date.toISOString().replace("T", " ").substring(0,16);
+  }
 
-    function windColor(speed) {
-      if (speed <= 10) return "#2ecc71";
-      if (speed <= 20) return "#f1c40f";
-      if (speed <= 30) return "#e67e22";
-      return "#e74c3c";
-    }
+  function windColor(speed) {
+    if (speed <= 10) return "#2ecc71";
+    if (speed <= 20) return "#f1c40f";
+    if (speed <= 30) return "#e67e22";
+    return "#e74c3c";
+  }
 
-    function showModal(title, raw) {
-      document.getElementById("modalTitle").textContent = title;
-      document.getElementById("modalRaw").textContent = raw;
-      document.getElementById("metarModal").style.display = "flex";
-    }
-    function closeModal() {
-      document.getElementById("metarModal").style.display = "none";
-    }
+  function showModal(title, raw) {
+    document.getElementById("modalTitle").textContent = title;
+    document.getElementById("modalRaw").textContent = raw;
+    document.getElementById("metarModal").style.display = "flex";
+  }
+  function closeModal() {
+    document.getElementById("metarModal").style.display = "none";
+  }
 
-    const airportNames = {
-      CYER: "Fort Severn", CYAT: "Attawapiskat", CYMO: "Moosonee",
-      CYPL: "Pickle Lake", CYQT: "Thunder Bay", CYAM: "Sault Ste. Marie",
-      CYTS: "Timmins", CYSB: "Sudbury", CYYB: "North Bay",
-      CYOW: "Ottawa", CYGK: "Kingston", CYQG: "Windsor",
-      CYVV: "Wiarton / Owen Sound", CYYZ: "Toronto Pearson", CYQA: "Muskoka"
-    };
+  // Stations (fixed order)
+  const stations = [
+    "CYER","CYAT","CYMO","CYPL","CYQT",
+    "CYAM","CYTS","CYSB","CYYB","CYOW",
+    "CYGK","CYQG","CYVV","CYYZ","CYQA"
+  ];
 
-    Papa.parse("clean_metars.csv", {
-      download: true,
-      header: true,
-      complete: function(results) {
-        const rows = results.data;
-        const latestByAirport = {};
-        let latestTime = null;
+  const airportNames = {
+    CYER: "Fort Severn", CYAT: "Attawapiskat", CYMO: "Moosonee",
+    CYPL: "Pickle Lake", CYQT: "Thunder Bay", CYAM: "Sault Ste. Marie",
+    CYTS: "Timmins", CYSB: "Sudbury", CYYB: "North Bay",
+    CYOW: "Ottawa", CYGK: "Kingston", CYQG: "Windsor",
+    CYVV: "Wiarton / Owen Sound", CYYZ: "Toronto Pearson", CYQA: "Muskoka"
+  };
 
-        rows.forEach(r => {
-          if (!r.icao) return;
-          if (!latestByAirport[r.icao] || new Date(r.observed_utc) > new Date(latestByAirport[r.icao].observed_utc)) {
-            latestByAirport[r.icao] = r;
+  Papa.parse("clean_metars.csv", {
+    download: true,
+    header: true,
+    complete: function(results) {
+      const rows = results.data;
+      const latestByAirport = {};
+      let latestTime = null;
+
+      // find latest per ICAO
+      stations.forEach(icao => {
+        const stationRows = rows.filter(r => r.icao === icao && r.observed_utc);
+        if (stationRows.length > 0) {
+          stationRows.sort((a, b) => new Date(b.observed_utc) - new Date(a.observed_utc));
+          latestByAirport[icao] = stationRows[0];
+
+          if (!latestTime || new Date(stationRows[0].observed_utc) > new Date(latestTime)) {
+            latestTime = stationRows[0].observed_utc;
           }
-          if (r.observed_utc && (!latestTime || new Date(r.observed_utc) > new Date(latestTime))) {
-            latestTime = r.observed_utc;
-          }
-        });
-
-        if (latestTime) {
-          document.getElementById("lastUpdated").textContent =
-            "Last Updated: " + toEDT(latestTime) + " EDT";
         }
+      });
 
-        const grid = document.getElementById("airportGrid");
-        Object.values(latestByAirport).forEach(r => {
-          const speed = parseInt(r.wind_kts) || 0;
-          const deg = parseInt(r.wind_dir_deg) || 0;
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <div class="icao">${r.icao}</div>
-            <div class="category cat-${r.flight_category}">${r.flight_category}</div>
-            <div class="obs-time">${toEDT(r.observed_utc)}</div>
-            <div class="temp">${r.temp_c}°C</div>
-            <div class="humidity">💧 ${r.rh_percent}%</div>
-            <div class="wind">
-              <div class="wind-compass">
-                <div class="label N">N</div>
-                <div class="label S">S</div>
-                <div class="label E">E</div>
-                <div class="label W">W</div>
-                <div class="wind-arrow"
-                     style="transform: translate(-50%, -50%) rotate(${deg}deg);
-                            border-top-color:${windColor(speed)}"></div>
-              </div>
-              ${deg}° @ ${speed} kts
-            </div>
-          `;
-          div.addEventListener("click", () => {
-            const name = airportNames[r.icao] || "Unknown Airport";
-            showModal(`${r.icao} – ${name}`, r.raw_text || "No raw METAR available");
-          });
-          grid.appendChild(div);
-        });
+      if (latestTime) {
+        document.getElementById("lastUpdated").textContent =
+          "Last Updated: " + toEDT(latestTime) + " EDT";
       }
-    });
-  </script>
+
+      const grid = document.getElementById("airportGrid");
+      stations.forEach(icao => {
+        const r = latestByAirport[icao];
+        if (!r) return; // skip if no data
+        const speed = parseInt(r.wind_kts) || 0;
+        const deg = parseInt(r.wind_dir_deg) || 0;
+
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <div class="icao">${r.icao}</div>
+          <div class="category cat-${r.flight_category}">${r.flight_category}</div>
+          <div class="obs-time">${toEDT(r.observed_utc)}</div>
+          <div class="temp">${r.temp_c}°C</div>
+          <div class="humidity">💧 ${r.rh_percent}%</div>
+          <div class="wind">
+            <div class="wind-compass">
+              <div class="label N">N</div>
+              <div class="label S">S</div>
+              <div class="label E">E</div>
+              <div class="label W">W</div>
+              <div class="wind-arrow"
+                   style="transform: translate(-50%, -50%) rotate(${deg}deg);
+                          border-top-color:${windColor(speed)}"></div>
+            </div>
+            ${deg}° @ ${speed} kts
+          </div>
+        `;
+        div.addEventListener("click", () => {
+          const name = airportNames[icao] || "Unknown Airport";
+          showModal(`${icao} – ${name}`, r.raw_text || "No raw METAR available");
+        });
+        grid.appendChild(div);
+      });
+    }
+  });
+</script>
 </body>
 </html>
