@@ -1,2 +1,4 @@
 [2025-09-05 18:30:17 UTC] Cleaned all_metars.csv → clean_metars.csv (before 15 → after 15, removed 0)
 [2025-09-05 18:30:17 UTC] Cleaned all_metars.csv → clean_metars_09_2025.csv (before 15 → after 15, removed 0)
+[2025-09-05 18:33:38 UTC] Cleaned all_metars.csv → clean_metars.csv (before 30 → after 19, removed 11)
+[2025-09-05 18:33:38 UTC] Cleaned all_metars.csv → clean_metars_09_2025.csv (before 30 → after 19, removed 11)
