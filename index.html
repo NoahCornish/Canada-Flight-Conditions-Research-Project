@@ -32,9 +32,27 @@
       font-size: 1.8rem;
     }
     header p {
-      margin: 0.3rem 0 0;
+      margin: 0.3rem 0;
       font-size: 0.95rem;
       opacity: 0.9;
+    }
+
+    /* Map button */
+    .map-btn {
+      display: inline-block;
+      margin-top: 0.8rem;
+      background: #fff;
+      color: #3498db;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    .map-btn:hover {
+      background: #3498db;
+      color: #fff;
     }
 
     main {
@@ -120,18 +138,10 @@
       display: inline-block;
       color: white;
     }
-    .cat-VFR {
-      background: #2ecc71;
-    }
-    .cat-MVFR {
-      background: #3498db;
-    }
-    .cat-IFR {
-      background: #e74c3c;
-    }
-    .cat-LIFR {
-      background: #8e44ad;
-    }
+    .cat-VFR { background: #2ecc71; }
+    .cat-MVFR { background: #3498db; }
+    .cat-IFR { background: #e74c3c; }
+    .cat-LIFR { background: #8e44ad; }
 
     /* Wind compass */
     .wind {
@@ -152,26 +162,10 @@
       position: absolute;
       font-weight: bold;
     }
-    .wind-compass .N {
-      top: 2px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    .wind-compass .S {
-      bottom: 2px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    .wind-compass .E {
-      right: 2px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    .wind-compass .W {
-      left: 2px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
+    .wind-compass .N { top: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .S { bottom: 2px; left: 50%; transform: translateX(-50%); }
+    .wind-compass .E { right: 2px; top: 50%; transform: translateY(-50%); }
+    .wind-compass .W { left: 2px; top: 50%; transform: translateY(-50%); }
 
     .wind-arrow {
       width: 0;
@@ -203,6 +197,7 @@
   <header>
     <h1>🇨🇦 Canada METAR Viewer</h1>
     <p>Select an airport to view the latest METAR</p>
+    <a href="map.html" class="map-btn">🗺️ View as a Map!</a>
   </header>
 
   <main>
@@ -228,32 +223,24 @@
     }
 
     function windColor(speed) {
-      if (speed <= 10) return "#2ecc71"; // green
-      if (speed <= 20) return "#f1c40f"; // yellow
-      if (speed <= 30) return "#e67e22"; // orange
-      return "#e74c3c"; // red
+      if (speed <= 10) return "#2ecc71";
+      if (speed <= 20) return "#f1c40f";
+      if (speed <= 30) return "#e67e22";
+      return "#e74c3c";
     }
 
-    // Airport ICAOs and Names (50 total)
     const stations = {
-      // Ontario (15 fixed)
       CYER:"Fort Severn", CYAT:"Attawapiskat", CYMO:"Moosonee", CYPL:"Pickle Lake",
       CYQT:"Thunder Bay", CYAM:"Sault Ste. Marie", CYTS:"Timmins", CYSB:"Sudbury",
       CYYB:"North Bay", CYOW:"Ottawa", CYGK:"Kingston", CYQG:"Windsor",
       CYVV:"Wiarton/Owen Sound", CYYZ:"Toronto Pearson", CYQA:"Muskoka",
-      // BC
       CYVR:"Vancouver", CYYJ:"Victoria", CYLW:"Kelowna", CYXS:"Prince George", CYXT:"Terrace", CYQQ:"Comox",
-      // Alberta
       CYYC:"Calgary", CYEG:"Edmonton", CYMM:"Fort McMurray", CYQF:"Red Deer",
-      // Sask/MB
       CYXE:"Saskatoon", CYQR:"Regina", CYWG:"Winnipeg", CYBR:"Brandon",
-      // Quebec
       CYUL:"Montreal-Trudeau", CYHU:"Montreal St-Hubert", CYQB:"Quebec City", CYVO:"Val-d’Or",
       CYUY:"Rouyn-Noranda", CYZV:"Sept-Îles", CYBC:"Baie-Comeau", CYRJ:"Roberval",
-      // Atlantic
       CYHZ:"Halifax", CYYG:"Charlottetown", CYQM:"Moncton", CYFC:"Fredericton",
       CYYT:"St. John's", CYQY:"Sydney",
-      // North
       CYXY:"Whitehorse", CYZF:"Yellowknife", CYFB:"Iqaluit", CYRT:"Rankin Inlet",
       CYBK:"Baker Lake", CYRB:"Resolute Bay", CYCO:"Kugluktuk"
     };
@@ -267,7 +254,6 @@
       complete: function(results) {
         const rows = results.data.filter(r => r.icao && r.observed_utc && stations[r.icao]);
 
-        // Find latest METAR for each airport
         rows.forEach(r => {
           const t = new Date(r.observed_utc);
           if (!latestByAirport[r.icao] || t > new Date(latestByAirport[r.icao].observed_utc)) {
@@ -278,13 +264,11 @@
           }
         });
 
-        // Last updated text
         if (globalLatest) {
           document.getElementById("lastUpdated").textContent =
             "Data as of " + toLocalTime(globalLatest);
         }
 
-        // Populate dropdown
         const sel = document.getElementById("airportSelect");
         sel.innerHTML = '<option disabled selected>Select an airport...</option>';
         for (const [icao, name] of Object.entries(stations)) {
@@ -294,7 +278,6 @@
           sel.appendChild(opt);
         }
 
-        // Show card when selected
         sel.addEventListener("change", () => {
           renderCard(sel.value);
         });
