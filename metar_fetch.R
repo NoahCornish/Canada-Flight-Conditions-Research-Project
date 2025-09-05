@@ -3,6 +3,7 @@
 # Fetch decoded METARs for multiple ICAOs and save:
 #   1) A growing "monster file" (saved_METARs.csv)
 #   2) Monthly archive files (metars_YYYY_MM.csv)
+#   3) A log file (metar_log.txt) with summary of each run
 #
 # API key comes from env var CHECKWX_API_KEY
 # ------------------------------------------------------------------------------
@@ -26,6 +27,7 @@ STATIONS <- c(
 )
 
 OUTFILE_MONSTER <- "saved_METARs.csv"   # master archive
+LOGFILE         <- "metar_log.txt"      # run log
 APPEND_MODE     <- TRUE
 # ------------------------------------------------------------
 
@@ -151,47 +153,66 @@ fetch_all <- function(stations, key) {
 }
 
 # Write to monster + monthly archive (only new unique METARs)
-write_csvs <- function(df, monster_file, append_mode = TRUE) {
+write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
   col_order <- c(
     "icao","observed_utc","flight_category","temp_c","dewpoint_c","rh_percent",
     "wind_dir_deg","wind_kts","vis_m","altimeter_hg","raw_text","fetched_at_utc"
   )
   df <- df[, col_order]
 
+  total_new <- 0
+
   # ---- Monster file ----
   if (append_mode && file.exists(monster_file)) {
     existing <- tryCatch(read.csv(monster_file, stringsAsFactors = FALSE), error = function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      # Compare against existing, only keep new rows
+      # Convert character back to datetime
+      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
+      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
+
+      # Compare keys (icao + observed + raw_text)
       existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-      new_key <- paste(df$icao, df$observed_utc, df$raw_text)
-      df <- df[!new_key %in% existing_key, ]
-      df <- bind_rows(existing, df)
+      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
+      df_new       <- df[!new_key %in% existing_key, ]
+
+      total_new <- total_new + nrow(df_new)
+      df <- bind_rows(existing, df_new)
     }
+  } else {
+    total_new <- nrow(df)
   }
   utils::write.csv(df, monster_file, row.names = FALSE)
-  message(sprintf("Updated monster file: %s", monster_file))
 
   # ---- Monthly archive ----
-  month_stamp <- format(Sys.time(), "%Y_%m")
+  month_stamp  <- format(Sys.time(), "%Y_%m")
   monthly_file <- sprintf("metars_%s.csv", month_stamp)
 
   if (file.exists(monthly_file)) {
     existing <- tryCatch(read.csv(monthly_file, stringsAsFactors = FALSE), error = function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
+      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
+      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
+
       existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-      new_key <- paste(df$icao, df$observed_utc, df$raw_text)
-      df <- df[!new_key %in% existing_key, ]
-      df <- bind_rows(existing, df)
+      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
+      df_new       <- df[!new_key %in% existing_key, ]
+
+      total_new <- total_new + nrow(df_new)
+      df <- bind_rows(existing, df_new)
     }
   }
   utils::write.csv(df, monthly_file, row.names = FALSE)
-  message(sprintf("Updated monthly file: %s", monthly_file))
+
+  # ---- Logging ----
+  log_msg <- sprintf("[%s] Added %d new METAR(s)", 
+                     format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC"), total_new)
+  cat(log_msg, "\n", file = log_file, append = TRUE)
+  message(log_msg)
 }
 
 # --------------------------- Main ---------------------------
 results <- fetch_all(STATIONS, api_key)
-write_csvs(results, OUTFILE_MONSTER, append_mode = APPEND_MODE)
+write_csvs(results, OUTFILE_MONSTER, LOGFILE, append_mode = APPEND_MODE)
 
 # Preview
 print(results)
