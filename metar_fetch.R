@@ -1,43 +1,62 @@
 #!/usr/bin/env Rscript
 # metar_fetch.R
-# Fetch decoded METARs for multiple ICAOs and save:
-#   1) Monster file (saved_METARs.csv)
-#   2) Monthly archive (metars_YYYY_MM.csv)
-#   3) Run log (metar_log.txt)
-#
-# Only logs unique METARs by (icao, observed_utc, raw_text).
-# API key must be set as env var CHECKWX_API_KEY.
+# Fetch decoded METAR for multiple ICAOs (single row per station) and write CSV outputs.
+# - API key is read from env var CHECKWX_API_KEY
+# - Writes:
+#   1. Monster archive: saved_METARs.csv (all time, deduped)
+#   2. Monthly archives: metars_YYYY_MM.csv
+#   3. Run log: metar_log.txt
+# - Time Handling:
+#   • observed_utc + observed_local (America/Toronto)
+#   • fetched_at_utc + fetched_at_local (America/Toronto)
+# ------------------------------------------------------------------------------
+# NOTE: This script is verbose and broken into sections for clarity.
 # ------------------------------------------------------------------------------
 
 # ----------------------- User settings ----------------------
+# Ontario Airports Selected for Maximum Geographic Spread (15 total)
 STATIONS <- c(
   # --- Far North / James Bay ---
-  "CYMO", "CYPL",
+  "CYMO", # Moosonee – access point for James Bay communities
+  "CYPL", # Pickle Lake – remote northern Ontario hub
+
   # --- Northeast Corridor ---
-  "CYTS", "CYSB", "CYYB",
+  "CYTS", # Timmins – major hub
+  "CYSB", # Sudbury – largest Northern Ontario city
+  "CYYB", # North Bay – transition north/south
+
   # --- Northwest Ontario ---
-  "CYQT",
+  "CYQT", # Thunder Bay – largest NW Ontario hub
+
   # --- Eastern Ontario ---
-  "CYOW", "CYGK",
+  "CYOW", # Ottawa – international hub
+  "CYGK", # Kingston – Lake Ontario east-end
+
   # --- Southwest Ontario ---
-  "CYQG", "CYXU", "CYHM",
-  # --- GTA ---
-  "CYYZ", "CYTZ", "CYOO",
-  # --- Central Ontario ---
-  "CYQA"
+  "CYQG", # Windsor – border city
+  "CYXU", # London – large SW Ontario airport
+  "CYHM", # Hamilton – southern Ontario cargo hub
+
+  # --- Greater Toronto Area ---
+  "CYYZ", # Toronto Pearson – busiest airport in Canada
+  "CYTZ", # Billy Bishop – downtown Toronto
+  "CYOO", # Oshawa – eastern GTA
+
+  # --- Central Ontario / Cottage Country ---
+  "CYQA"  # Muskoka – cottage/recreational region
 )
 
-OUTFILE_MONSTER <- "saved_METARs.csv"
-LOGFILE         <- "metar_log.txt"
-APPEND_MODE     <- TRUE
+OUTFILE_MONSTER <- "saved_METARs.csv"   # Master archive
+LOGFILE         <- "metar_log.txt"      # Run log
+APPEND_MODE     <- TRUE                 # Append + dedupe mode
 # ------------------------------------------------------------
 
-# Install missing packages quietly, then load
-need <- c("httr", "jsonlite", "tibble", "dplyr", "lubridate")
+# ---------------- Package Handling --------------------------
+need <- c("httr","jsonlite","tibble","dplyr","lubridate")
 missing <- need[!(need %in% rownames(installed.packages()))]
 if (length(missing)) {
-  message("Installing packages: ", paste(missing, collapse = ", "))
-  install.packages(missing, quiet = TRUE)
+  message("Installing missing packages: ", paste(missing, collapse=", "))
+  install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)
 }
 suppressPackageStartupMessages({
   library(httr)
@@ -47,172 +66,152 @@ suppressPackageStartupMessages({
   library(lubridate)
 })
 
-# Pull API key from env
+# ---------------- API Key Handling --------------------------
 api_key <- Sys.getenv("CHECKWX_API_KEY", unset = NA)
 if (is.na(api_key) || nchar(api_key) == 0) {
-  stop("No API key found. Set env var CHECKWX_API_KEY first, e.g.\n",
-       'Sys.setenv(CHECKWX_API_KEY = "YOUR_KEY_HERE")', call. = FALSE)
+  stop("No API key found. Set env var CHECKWX_API_KEY first.")
 }
 
-# Safe extractor
+# ---------------- Utility Functions -------------------------
+# Null coalescing helper
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
-# Fetch one station
+# Numeric extractor with fallback
+get_num <- function(d, name_primary, name_alt=NULL) {
+  if (name_primary %in% names(d)) as.numeric(d[[name_primary]])
+  else if (!is.null(name_alt) && name_alt %in% names(d)) as.numeric(d[[name_alt]])
+  else NA_real_
+}
+
+# Character extractor with fallback
+get_chr <- function(d, name) {
+  if (name %in% names(d)) as.character(d[[name]]) else NA_character_
+}
+
+# ---------------- Station Fetch Function --------------------
 get_metar_row <- function(icao, key) {
   url <- paste0("https://api.checkwx.com/metar/", icao, "/decoded")
   res <- VERB("GET", url = url, add_headers(`X-API-Key` = key))
 
-  tryCatch({ stop_for_status(res) }, error = function(e) {
+  # HTTP status handling
+  tryCatch({ stop_for_status(res) }, error=function(e) {
     warning(sprintf("Request failed for %s: %s", icao, conditionMessage(e)))
-    return(tibble(
-      icao            = icao,
-      observed_utc    = as.POSIXct(NA),
-      flight_category = NA_character_,
-      temp_c          = NA_real_,
-      dewpoint_c      = NA_real_,
-      rh_percent      = NA_real_,
-      wind_dir_deg    = NA_real_,
-      wind_kts        = NA_real_,
-      vis_m           = NA_real_,
-      altimeter_hg    = NA_real_,
-      raw_text        = NA_character_,
-      fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
-    ))
+    return(NULL)
   })
 
-  txt <- content(res, "text", encoding = "UTF-8")
-  parsed <- tryCatch(jsonlite::fromJSON(txt, flatten = TRUE), error = function(e) NULL)
-
+  txt <- content(res, "text", encoding="UTF-8")
+  parsed <- tryCatch(fromJSON(txt, flatten=TRUE), error=function(e) NULL)
   if (is.null(parsed) || is.null(parsed$data) || nrow(parsed$data) < 1) {
-    warning(sprintf("No data returned for %s", icao))
-    return(tibble(
-      icao            = icao,
-      observed_utc    = as.POSIXct(NA),
-      flight_category = NA_character_,
-      temp_c          = NA_real_,
-      dewpoint_c      = NA_real_,
-      rh_percent      = NA_real_,
-      wind_dir_deg    = NA_real_,
-      wind_kts        = NA_real_,
-      vis_m           = NA_real_,
-      altimeter_hg    = NA_real_,
-      raw_text        = NA_character_,
-      fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
-    ))
+    warning(sprintf("No data for %s", icao))
+    return(NULL)
   }
 
-  d <- parsed$data[1, , drop = FALSE]
+  d <- parsed$data[1, , drop=FALSE]
 
-  get_num <- function(name_primary, name_alt = NULL) {
-    if (name_primary %in% names(d)) as.numeric(d[[name_primary]])
-    else if (!is.null(name_alt) && name_alt %in% names(d)) as.numeric(d[[name_alt]])
-    else NA_real_
-  }
-  get_chr <- function(name) if (name %in% names(d)) as.character(d[[name]]) else NA_character_
+  # Observed UTC + local conversion
+  observed_utc <- if ("observed" %in% names(d)) {
+    tryCatch(ymd_hms(d$observed, tz="UTC"), error=function(e) as.POSIXct(NA))
+  } else { as.POSIXct(NA) }
 
+  observed_local <- if (!is.na(observed_utc)) {
+    with_tz(observed_utc, "America/Toronto")
+  } else { as.POSIXct(NA) }
+
+  # Fetch time
+  fetched_utc   <- Sys.time()
+  fetched_local <- with_tz(fetched_utc, "America/Toronto")
+
+  # Build tibble
   tibble(
-    icao            = get_chr("icao") %||% icao,
-    observed_utc    = if ("observed" %in% names(d))
-                        tryCatch(lubridate::ymd_hms(d$observed, tz = "UTC"),
-                                 error = function(e) as.POSIXct(NA))
-                      else as.POSIXct(NA),
-    flight_category = get_chr("flight_category"),
-    temp_c          = get_num("temperature.celsius", "temperature"),
-    dewpoint_c      = get_num("dewpoint.celsius", "dewpoint"),
-    rh_percent      = get_num("humidity.percent", "humidity"),
-    wind_dir_deg    = get_num("wind.degrees", "wind"),
-    wind_kts        = get_num("wind.speed_kts", "wind_kts"),
-    vis_m           = get_num("visibility.meters", "visibility"),
-    altimeter_hg    = get_num("barometer.hg", "altimeter_hg"),
-    raw_text        = get_chr("raw_text"),
-    fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
+    icao              = get_chr(d,"icao") %||% icao,
+    observed_utc      = observed_utc,
+    observed_local    = observed_local,
+    flight_category   = get_chr(d,"flight_category"),
+    temp_c            = get_num(d,"temperature.celsius","temperature"),
+    dewpoint_c        = get_num(d,"dewpoint.celsius","dewpoint"),
+    rh_percent        = get_num(d,"humidity.percent","humidity"),
+    wind_dir_deg      = get_num(d,"wind.degrees","wind"),
+    wind_kts          = get_num(d,"wind.speed_kts","wind_kts"),
+    vis_m             = get_num(d,"visibility.meters","visibility"),
+    altimeter_hg      = get_num(d,"barometer.hg","altimeter_hg"),
+    raw_text          = get_chr(d,"raw_text"),
+    fetched_at_utc    = fetched_utc,
+    fetched_at_local  = fetched_local
   )
 }
 
-# Fetch all stations
+# ---------------- Bulk Fetch Function -----------------------
 fetch_all <- function(stations, key) {
   rows <- lapply(stations, function(s) {
-    tryCatch(get_metar_row(s, key), error = function(e) {
+    tryCatch(get_metar_row(s, key), error=function(e) {
       warning(sprintf("Error parsing %s: %s", s, conditionMessage(e)))
-      tibble(
-        icao            = s,
-        observed_utc    = as.POSIXct(NA),
-        flight_category = NA_character_,
-        temp_c          = NA_real_,
-        dewpoint_c      = NA_real_,
-        rh_percent      = NA_real_,
-        wind_dir_deg    = NA_real_,
-        wind_kts        = NA_real_,
-        vis_m           = NA_real_,
-        altimeter_hg    = NA_real_,
-        raw_text        = NA_character_,
-        fetched_at_utc  = as.POSIXct(Sys.time(), tz = "UTC")
-      )
+      NULL
     })
   })
-  bind_rows(rows) |> arrange(icao, desc(observed_utc))
+  bind_rows(rows)
 }
 
-# Write to monster + monthly archive (deduped)
-write_csvs <- function(df, monster_file, log_file, append_mode = TRUE) {
-  col_order <- c(
-    "icao","observed_utc","flight_category","temp_c","dewpoint_c","rh_percent",
-    "wind_dir_deg","wind_kts","vis_m","altimeter_hg","raw_text","fetched_at_utc"
-  )
+# ---------------- Write CSVs ------------------------
+write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
+  if (nrow(df) == 0) return()
+
+  # Ensure consistent columns
+  col_order <- c("icao","observed_utc","observed_local",
+                 "flight_category","temp_c","dewpoint_c","rh_percent",
+                 "wind_dir_deg","wind_kts","vis_m","altimeter_hg",
+                 "raw_text","fetched_at_utc","fetched_at_local")
+
+  # Append mode: merge with existing and dedupe
+  if (append_mode && file.exists(outfile_monster)) {
+    existing <- tryCatch(read.csv(outfile_monster, stringsAsFactors=FALSE), error=function(e) NULL)
+    if (!is.null(existing) && nrow(existing)) {
+      existing$observed_utc    <- as.POSIXct(existing$observed_utc, tz="UTC")
+      existing$fetched_at_utc  <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local  <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
+      df <- bind_rows(existing, df) |>
+        arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
+        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
+    }
+  }
+
+  # Reorder columns
+  missing_cols <- setdiff(col_order, names(df))
+  for (mc in missing_cols) df[[mc]] <- NA
   df <- df[, col_order]
 
-  total_new <- 0
+  # Write monster file
+  write.csv(df, outfile_monster, row.names=FALSE)
 
-  # ---- Monster file ----
-  if (append_mode && file.exists(monster_file)) {
-    existing <- tryCatch(read.csv(monster_file, stringsAsFactors = FALSE), error = function(e) NULL)
+  # Monthly file
+  now_local <- with_tz(Sys.time(), "America/Toronto")
+  month_file <- sprintf("metars_%s.csv", format(now_local,"%Y_%m"))
+  if (file.exists(month_file)) {
+    existing <- tryCatch(read.csv(month_file, stringsAsFactors=FALSE), error=function(e) NULL)
     if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
-
-      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
-      df_new       <- df[!new_key %in% existing_key, ]
-
-      total_new <- nrow(df_new)
-      df <- bind_rows(existing, df_new)
-    }
-  } else {
-    total_new <- nrow(df)
-  }
-  utils::write.csv(df, monster_file, row.names = FALSE)
-
-  # ---- Monthly archive ----
-  month_stamp  <- format(Sys.time(), "%Y_%m")
-  monthly_file <- sprintf("metars_%s.csv", month_stamp)
-
-  if (file.exists(monthly_file)) {
-    existing <- tryCatch(read.csv(monthly_file, stringsAsFactors = FALSE), error = function(e) NULL)
-    if (!is.null(existing) && nrow(existing)) {
-      existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz = "UTC")
-      existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz = "UTC")
-
-      existing_key <- paste(existing$icao, existing$observed_utc, existing$raw_text)
-      new_key      <- paste(df$icao, df$observed_utc, df$raw_text)
-      df_new       <- df[!new_key %in% existing_key, ]
-
-      total_new <- total_new + nrow(df_new)
-      df <- bind_rows(existing, df_new)
+      existing$observed_utc    <- as.POSIXct(existing$observed_utc, tz="UTC")
+      existing$fetched_at_utc  <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local  <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
+      df <- bind_rows(existing, df) |>
+        arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
+        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
     }
   }
-  # Always write monthly file
-  utils::write.csv(df, monthly_file, row.names = FALSE)
+  write.csv(df, month_file, row.names=FALSE)
 
-  # ---- Logging ----
-  log_msg <- sprintf("[%s] Added %d new unique METAR(s)",
-                     format(Sys.time(), "%Y-%m-%d %H:%M:%S", tz = "UTC"), total_new)
-  cat(log_msg, "\n", file = log_file, append = TRUE)
-  message(log_msg)
+  # Log file entry
+  added <- nrow(df)
+  now_str <- format(now_local, "%Y-%m-%d %H:%M:%S %Z")
+  log_line <- sprintf("[%s] Added %d unique METAR(s)\n", now_str, added)
+  cat(log_line, file=LOGFILE, append=TRUE)
+
+  message(sprintf("Wrote %d rows to %s and %s", nrow(df), outfile_monster, month_file))
 }
 
 # --------------------------- Main ---------------------------
 results <- fetch_all(STATIONS, api_key)
-write_csvs(results, OUTFILE_MONSTER, LOGFILE, append_mode = APPEND_MODE)
+write_csvs(results, OUTFILE_MONSTER, append_mode=APPEND_MODE)
 
-# Preview
+# Optional console preview
 print(results)
