@@ -22,29 +22,30 @@
       color: white;
       padding: 1.2rem;
       text-align: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
       box-shadow: 0 2px 5px rgba(0,0,0,0.15);
     }
     header h1 { margin: 0; font-size: 1.8rem; }
     header p { margin: 0.3rem 0 0; font-size: 0.95rem; opacity: 0.9; }
 
-    main { max-width: 1200px; margin: auto; padding: 1.5rem; }
+    main { max-width: 900px; margin: auto; padding: 1.5rem; }
+
     h2 {
-      margin-top: 1.5rem;
+      margin-top: 1rem;
       color: #34495e;
       font-size: 1.4rem;
-      border-bottom: 2px solid #e0e0e0;
-      padding-bottom: 0.25rem;
     }
 
-    /* Grid layout */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
+    /* Selector */
+    .selector {
+      text-align: center;
+      margin: 1rem 0;
+    }
+    select {
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: inherit;
     }
 
     /* Card style */
@@ -52,22 +53,18 @@
       background: white;
       border-radius: 12px;
       padding: 1rem;
+      margin-top: 1.5rem;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      display: flex;
-      flex-direction: column;
       text-align: center;
-      transition: transform 0.15s ease-in-out;
     }
-    .card:hover { transform: translateY(-4px); }
 
     .icao { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.2rem; }
-    .airport-name { font-size: 0.85rem; color: #555; margin-bottom: 0.6rem; }
+    .airport-name { font-size: 0.9rem; color: #555; margin-bottom: 0.6rem; }
     .obs-time { font-size: 0.8rem; color: #666; margin-bottom: 0.6rem; }
     .temp { font-size: 1.3rem; margin-bottom: 0.3rem; font-weight: 500; }
     .dew { font-size: 0.9rem; color: #666; margin-bottom: 0.3rem; }
     .humidity, .altimeter { font-size: 0.85rem; margin: 2px 0; color: #444; }
 
-    /* Category badge */
     .category {
       font-size: 0.85rem;
       font-weight: bold;
@@ -91,12 +88,12 @@
       margin: 0.5rem auto;
       border: 2px solid #bbb;
       border-radius: 50%;
-      font-size: 0.7rem;
-      color: #555;
     }
     .wind-compass .label {
       position: absolute;
       font-weight: bold;
+      font-size: 0.7rem;
+      color: #555;
     }
     .wind-compass .N { top: 2px; left: 50%; transform: translateX(-50%); }
     .wind-compass .S { bottom: 2px; left: 50%; transform: translateX(-50%); }
@@ -116,7 +113,6 @@
       transform: translate(-50%, -50%);
     }
 
-    /* Raw METAR */
     .raw-text {
       margin-top: 0.75rem;
       padding: 0.5rem;
@@ -128,12 +124,11 @@
       text-align: left;
     }
 
-    /* Last updated */
     .last-updated {
       text-align: center;
       font-size: 0.9rem;
       color: #666;
-      margin-bottom: 1rem;
+      margin: 1rem 0;
     }
   </style>
 </head>
@@ -144,9 +139,12 @@
   </header>
 
   <main>
-    <h2>📊 Live Conditions</h2>
+    <h2>📊 Select Airport</h2>
+    <div class="selector">
+      <select id="airportSelect"></select>
+    </div>
     <div class="last-updated" id="lastUpdated"></div>
-    <div class="grid" id="airportGrid"></div>
+    <div id="airportCard"></div>
   </main>
 
   <script>
@@ -178,15 +176,15 @@
       CYVV: "Wiarton / Owen Sound", CYYZ: "Toronto Pearson", CYQA: "Muskoka"
     };
 
+    let latestByAirport = {};
+    let latestTime = null;
+
     Papa.parse("all_metars.csv", {
       download: true,
       header: true,
       complete: function(results) {
         const rows = results.data.filter(r => r.icao && r.observed_utc);
-        const latestByAirport = {};
-        let latestTime = null;
 
-        // select latest METAR per ICAO
         stations.forEach(icao => {
           const stationRows = rows.filter(r => r.icao === icao);
           if (stationRows.length > 0) {
@@ -204,43 +202,58 @@
             "Last Updated: " + toEDT(latestTime) + " EDT";
         }
 
-        const grid = document.getElementById("airportGrid");
+        // Populate dropdown
+        const select = document.getElementById("airportSelect");
         stations.forEach(icao => {
-          const r = latestByAirport[icao];
-          if (!r) return;
+          const opt = document.createElement("option");
+          opt.value = icao;
+          opt.textContent = `${icao} – ${airportNames[icao]}`;
+          select.appendChild(opt);
+        });
 
-          const speed = parseInt(r.wind_kts) || 0;
-          const deg = parseInt(r.wind_dir_deg) || 0;
+        // Default: show first airport
+        if (stations.length > 0) showAirport(stations[0]);
 
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <div class="icao">${icao}</div>
-            <div class="airport-name">${airportNames[icao] || ""}</div>
-            <div class="category cat-${r.flight_category}">${r.flight_category}</div>
-            <div class="obs-time">${toEDT(r.observed_utc)}</div>
-            <div class="temp">${r.temp_c}°C</div>
-            <div class="dew">Dewpoint: ${r.dewpoint_c}°C</div>
-            <div class="humidity">💧 Humidity: ${r.rh_percent}%</div>
-            <div class="altimeter">Altimeter: ${r.altimeter_hg} inHg</div>
-            <div class="wind">
-              <div class="wind-compass">
-                <div class="label N">N</div>
-                <div class="label S">S</div>
-                <div class="label E">E</div>
-                <div class="label W">W</div>
-                <div class="wind-arrow"
-                     style="transform: translate(-50%, -50%) rotate(${deg}deg);
-                            border-top-color:${windColor(speed)}"></div>
-              </div>
-              ${deg}° @ ${speed} kts
-            </div>
-            <div class="raw-text">${r.raw_text || ""}</div>
-          `;
-          grid.appendChild(div);
+        select.addEventListener("change", e => {
+          showAirport(e.target.value);
         });
       }
     });
+
+    function showAirport(icao) {
+      const r = latestByAirport[icao];
+      if (!r) return;
+
+      const speed = parseInt(r.wind_kts) || 0;
+      const deg = parseInt(r.wind_dir_deg) || 0;
+
+      const card = document.getElementById("airportCard");
+      card.innerHTML = `
+        <div class="card">
+          <div class="icao">${icao}</div>
+          <div class="airport-name">${airportNames[icao] || ""}</div>
+          <div class="category cat-${r.flight_category}">${r.flight_category}</div>
+          <div class="obs-time">${toEDT(r.observed_utc)}</div>
+          <div class="temp">${r.temp_c}°C</div>
+          <div class="dew">Dewpoint: ${r.dewpoint_c}°C</div>
+          <div class="humidity">💧 Humidity: ${r.rh_percent}%</div>
+          <div class="altimeter">Altimeter: ${r.altimeter_hg} inHg</div>
+          <div class="wind">
+            <div class="wind-compass">
+              <div class="label N">N</div>
+              <div class="label S">S</div>
+              <div class="label E">E</div>
+              <div class="label W">W</div>
+              <div class="wind-arrow"
+                   style="transform: translate(-50%, -50%) rotate(${deg}deg);
+                          border-top-color:${windColor(speed)}"></div>
+            </div>
+            ${deg}° @ ${speed} kts
+          </div>
+          <div class="raw-text">${r.raw_text || ""}</div>
+        </div>
+      `;
+    }
   </script>
 </body>
 </html>
