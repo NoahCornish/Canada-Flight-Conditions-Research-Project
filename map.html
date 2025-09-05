@@ -16,54 +16,57 @@
     body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
     #map { width: 100%; height: 100%; }
 
-    /* Legend container */
+    /* Legend */
     .legend {
       position: absolute;
       top: 15px;
       right: 15px;
       background: white;
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 0.9rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-size: 0.85rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      max-width: 180px;
       transition: max-height 0.3s ease, padding 0.3s ease;
-      max-height: 220px;
-      overflow: hidden;
     }
     .legend.collapsed {
-      max-height: 30px;
-      padding: 6px 10px;
+      max-height: 20px;
+      overflow: hidden;
+      padding: 4px 8px;
       cursor: pointer;
     }
-    .legend span { display: flex; align-items: center; margin-bottom: 5px; }
+    .legend h4 {
+      margin: 0;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .legend span { display: flex; align-items: center; margin-bottom: 4px; }
     .dot {
-      width: 14px; height: 14px; border-radius: 50%;
-      display: inline-block; margin-right: 8px;
+      width: 12px; height: 12px; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
     }
     .dot-vfr { background: #2ecc71; }
     .dot-mvfr { background: #3498db; }
     .dot-ifr { background: #e74c3c; }
     .dot-lifr { background: #8e44ad; }
 
-    /* Toggle button */
-    .legend-toggle {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      background: #eee;
-      border: none;
-      border-radius: 50%;
-      width: 20px; height: 20px;
-      font-size: 12px;
+    /* Toggle arrow */
+    .toggle {
+      font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      user-select: none;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="legend" id="legend">
-    <button class="legend-toggle" id="legendToggle">–</button>
+  <div class="legend collapsed" id="legend">
+    <h4>
+      Flight Categories
+      <span class="toggle" onclick="toggleLegend()">▼</span>
+    </h4>
     <span><span class="dot dot-vfr"></span> VFR</span>
     <span><span class="dot dot-mvfr"></span> MVFR</span>
     <span><span class="dot dot-ifr"></span> IFR</span>
@@ -71,11 +74,17 @@
   </div>
 
   <script>
-    // Airport coordinates (updated set of 15)
+    function toggleLegend() {
+      const legend = document.getElementById('legend');
+      legend.classList.toggle('collapsed');
+      const arrow = legend.querySelector('.toggle');
+      arrow.textContent = legend.classList.contains('collapsed') ? '►' : '▼';
+    }
+
+    // Airport coordinates
     const airports = {
-      CYER: [56.018, -87.676],  // Fort Severn
       CYMO: [51.291, -80.607],  // Moosonee
-      CYAT: [52.927, -82.431],  // Attawapiskat
+      CYER: [56.018, -87.676],  // Fort Severn
       CYPL: [51.446, -90.214],  // Pickle Lake
       CYQT: [48.371, -89.324],  // Thunder Bay
       CYAM: [46.485, -84.509],  // Sault Ste. Marie
@@ -85,12 +94,13 @@
       CYOW: [45.322, -75.669],  // Ottawa
       CYGK: [44.225, -76.596],  // Kingston
       CYQG: [42.275, -82.955],  // Windsor
-      CYOS: [44.590, -80.837],  // Owen Sound
+      CYVV: [44.746, -81.107],  // Wiarton (replaces Owen Sound CYOS)
       CYYZ: [43.677, -79.624],  // Toronto Pearson
-      CYQA: [44.974, -79.303]   // Muskoka
+      CYQA: [44.974, -79.303],  // Muskoka
+      CYTZ: [43.627, -79.396]   // Billy Bishop
     };
 
-    // Flight category colors
+    // Colors for flight categories
     function categoryColor(cat) {
       switch(cat) {
         case "VFR": return "#2ecc71";
@@ -102,7 +112,7 @@
     }
 
     // Initialize map
-    const map = L.map('map').setView([48.5, -84], 5.5);
+    const map = L.map('map').setView([47.5, -82.5], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -128,7 +138,7 @@
           const color = categoryColor(r.flight_category);
 
           const marker = L.circleMarker([lat, lon], {
-            radius: 9,
+            radius: 8,
             fillColor: color,
             color: "#333",
             weight: 1,
@@ -145,14 +155,6 @@
           `);
         });
       }
-    });
-
-    // Toggle legend open/close
-    const legend = document.getElementById('legend');
-    const toggle = document.getElementById('legendToggle');
-    toggle.addEventListener('click', () => {
-      legend.classList.toggle('collapsed');
-      toggle.textContent = legend.classList.contains('collapsed') ? "+" : "–";
     });
   </script>
 </body>
