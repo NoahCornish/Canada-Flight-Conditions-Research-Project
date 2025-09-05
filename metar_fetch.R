@@ -178,7 +178,7 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
       existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
-        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)   # <-- dedupe fix
+        distinct(icao, observed_utc, raw_text, fetched_at_utc, .keep_all=TRUE)
     }
   }
 
@@ -202,7 +202,7 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
       existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
-        distinct(icao, observed_utc, raw_text, .keep_all=TRUE)   # <-- dedupe fix
+        distinct(icao, observed_utc, raw_text, fetched_at_utc, .keep_all=TRUE)
     }
   }
   write.csv(df, month_file, row.names=FALSE)
@@ -210,7 +210,7 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
   # Log
   added <- nrow(df)
   now_str <- format(now_local, "%Y-%m-%d %H:%M:%S %Z")
-  log_line <- sprintf("[%s] Added %d unique METAR(s)\n", now_str, added)
+  log_line <- sprintf("[%s] Total rows: %d (monster archive updated)\n", now_str, added)
   cat(log_line, file=LOGFILE, append=TRUE)
 
   message(sprintf("Wrote %d rows to %s and %s", nrow(df), outfile_monster, month_file))
