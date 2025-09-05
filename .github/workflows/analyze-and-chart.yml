@@ -35,7 +35,7 @@ jobs:
         run: Rscript charts.R
 
       - name: Run README Map
-        run: Rscript charts_readme.R
+        run: Rscript chart_readme.R
 
       - name: 💾 Commit and push results (CSV + charts)
         working-directory: ${{ github.workspace }}
