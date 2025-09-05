@@ -34,9 +34,6 @@ jobs:
       - name: 🎨 Run charts generator
         run: Rscript charts.R
 
-      - name: Run README Map
-        run: Rscript chart_readme.R
-
       - name: 💾 Commit and push results (CSV + charts)
         working-directory: ${{ github.workspace }}
         run: |
