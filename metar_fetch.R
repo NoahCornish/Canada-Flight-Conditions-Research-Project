@@ -137,20 +137,27 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
   now_local <- with_tz(Sys.time(), "America/Toronto")
   month_file <- sprintf("metars_%s.csv", format(now_local,"%Y_%m"))
 
+  # Handle empty result: write a run marker as POSIXct
   if (nrow(df) == 0) {
     message("⚠️ No METAR data fetched. Writing run marker.")
+    observed_now <- Sys.time()
     df <- tibble(
-      icao = "RUNMARK",
-      observed_utc = Sys.time(),
-      observed_local = now_local,
-      flight_category = NA,
-      temp_c = NA, dewpoint_c = NA, rh_percent = NA,
-      wind_dir_deg = NA, wind_kts = NA, vis_m = NA, altimeter_hg = NA,
-      conditions = "NO DATA",
-      clouds = NA,
-      raw_text = "RUN COMPLETED - NO NEW METARS",
-      fetched_at_utc = Sys.time(),
-      fetched_at_local = now_local
+      icao              = "RUNMARK",
+      observed_utc      = observed_now,
+      observed_local    = with_tz(observed_now, "America/Toronto"),
+      flight_category   = NA_character_,
+      temp_c            = NA_real_,
+      dewpoint_c        = NA_real_,
+      rh_percent        = NA_real_,
+      wind_dir_deg      = NA_real_,
+      wind_kts          = NA_real_,
+      vis_m             = NA_real_,
+      altimeter_hg      = NA_real_,
+      conditions        = "NO DATA",
+      clouds            = NA_character_,
+      raw_text          = "RUN COMPLETED - NO NEW METARS",
+      fetched_at_utc    = observed_now,
+      fetched_at_local  = with_tz(observed_now, "America/Toronto")
     )
   }
 
@@ -165,6 +172,8 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
     if (!is.null(existing)) {
       existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz="UTC")
       existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
         distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
@@ -181,6 +190,8 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
     if (!is.null(existing)) {
       existing$observed_utc   <- as.POSIXct(existing$observed_utc, tz="UTC")
       existing$fetched_at_utc <- as.POSIXct(existing$fetched_at_utc, tz="UTC")
+      existing$observed_local <- with_tz(existing$observed_utc,"America/Toronto")
+      existing$fetched_at_local<- with_tz(existing$fetched_at_utc,"America/Toronto")
       df <- bind_rows(existing, df) |>
         arrange(icao, desc(observed_utc), desc(fetched_at_utc)) |>
         distinct(icao, observed_utc, raw_text, .keep_all=TRUE)
@@ -194,7 +205,6 @@ write_csvs <- function(df, outfile_monster, append_mode=TRUE) {
   log_line <- sprintf("[%s] Archive now has %d rows\n", now_str, added)
   cat(log_line, file=LOGFILE, append=TRUE)
 
-  # Debug
   message("✅ Monster file rows: ", nrow(read.csv(outfile_monster)))
   message("✅ Monthly file rows: ", nrow(read.csv(month_file)))
 }
