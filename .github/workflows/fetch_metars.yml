@@ -3,11 +3,11 @@ name: 🌤️ Fetch METARs (Every 10 Minutes)
 on:
   schedule:
     - cron: "*/10 * * * *"   # Run every 10 minutes (UTC)
-  workflow_dispatch:          # Allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 permissions:
-  contents: write             # allow pushing updated CSVs/logs
-  issues: write               # allow posting notifications as comments
+  contents: write
+  issues: write
 
 concurrency:
   group: metar-scheduler
@@ -18,7 +18,7 @@ jobs:
     name: 📡 Fetch and Save METARs
     runs-on: ubuntu-latest
     container:
-      image: rocker/tidyverse:4.3.3   # R + Git + tidyverse already preinstalled
+      image: rocker/tidyverse:4.3.3
 
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
@@ -26,59 +26,45 @@ jobs:
       NOTIFY_ISSUE_TITLE: "📣 METAR Run Notifications"
 
     steps:
-      # ------------------------------------------------------------
-      - name: 🔍 Step 0 – Full Debug (before anything else)
+      - name: 🔍 Step 0 – Full Debug (before checkout)
         run: |
           echo "=== START DEBUG INFO ==="
           pwd
           ls -la
-          echo "--- Git version ---"
-          git --version || echo "Git not found!"
-          echo "--- ENV Variables ---"
-          env | sort
+          git --version || echo "Git not found"
           echo "=== END DEBUG INFO ==="
 
-      # ------------------------------------------------------------
       - name: 🛎️ Step 1 – Check out the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0             # full history so .git is present
-          persist-credentials: true  # keep credentials for push
+          fetch-depth: 0
+          persist-credentials: true
 
-      # ------------------------------------------------------------
       - name: 🔍 Step 2 – Debug after checkout
         run: |
           echo "=== DEBUG AFTER CHECKOUT ==="
           pwd
           ls -la
-          echo "--- Git Status ---"
+          # Mark repo as safe for Git
+          git config --global --add safe.directory $PWD
           git status
           echo "============================="
 
-      # ------------------------------------------------------------
       - name: 📦 Step 3 – Ensure required R packages are installed
         run: |
           Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate");
                        missing <- need[!(need %in% rownames(installed.packages()))];
                        if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
 
-      # ------------------------------------------------------------
       - name: 📝 Step 4 – Run the METAR fetch script
         run: Rscript metar_fetch.R
 
-      # ------------------------------------------------------------
       - name: 💾 Step 5 – Commit and push updated data files
         run: |
-          echo "=== DEBUG BEFORE COMMIT ==="
-          pwd
-          ls -la
-          git status
-          echo "==========================="
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory $PWD
           
-          # Stage monster file, monthly archives, and logs
           git add saved_METARs.csv metars_*.csv metar_log.txt || true
           
           if [ -n "$(git status --porcelain)" ]; then
@@ -88,13 +74,11 @@ jobs:
             echo "No changes to commit."
           fi
 
-      # ------------------------------------------------------------
       - name: ⏱️ Step 6 – Capture current timestamp (UTC)
         id: ts
         if: always()
         run: echo "now=$(date -u +'%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
 
-      # ------------------------------------------------------------
       - name: 🔔 Step 7 – Post run status as GitHub issue comment
         if: always()
         uses: actions/github-script@v7
@@ -105,7 +89,6 @@ jobs:
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
 
-            // Find or create notification issue
             const { data: issues } = await github.rest.issues.listForRepo({
               owner, repo, state: "open", per_page: 100
             });
