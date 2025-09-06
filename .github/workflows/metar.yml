@@ -1,4 +1,4 @@
-name: ⛅ METAR
+name: ⛅ METAR ⛈️
 
 on:
   schedule:
@@ -13,92 +13,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fetch:
-    name: 📡 Fetch and Save METARs
+  fetch_and_clean:
+    name: 📡 Fetch → 🧹 Clean (single run)
     runs-on: ubuntu-latest
     container:
       image: rocker/tidyverse:4.3.3
-
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
 
     steps:
-      - name: 🔍 Debug before checkout
-        run: |
-          echo "=== START DEBUG INFO ==="
-          pwd
-          ls -la
-          git --version || echo "Git not found"
-          echo "=== END DEBUG INFO ==="
-
       - name: 🛎️ Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: 📦 Install required R packages
+      - name: 🔧 Ensure required R packages are installed
         run: |
-          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate");
-                       missing <- need[!(need %in% rownames(installed.packages()))];
-                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
+          cd "$GITHUB_WORKSPACE"
+          Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate","readr");
+                      missing <- need[!(need %in% rownames(installed.packages()))];
+                      if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
 
-      - name: 📝 Run fetch script
-        run: Rscript metar_fetch.R
-
-      - name: 💾 Commit and push fetch results
+      - name: 📝 Run METAR fetch script
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory $PWD
-          
-          git add all_metars*.csv metar_log.txt || true
-          git status
-          git diff --cached --stat
-          
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Update METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git push
-          else
-            echo "No changes to commit."
-          fi
-
-  clean:
-    name: 🧹 Clean METAR archives
-    runs-on: ubuntu-latest
-    container:
-      image: rocker/tidyverse:4.3.3
-
-    needs: fetch   # ensures clean runs after fetch
-
-    steps:
-      - name: 🛎️ Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: 📦 Install required R packages
-        run: |
-          Rscript -e 'need <- c("dplyr","lubridate","readr");
-                       missing <- need[!(need %in% rownames(installed.packages()))];
-                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
+          cd "$GITHUB_WORKSPACE"
+          Rscript metar_fetch.R
 
       - name: 🧹 Run cleaning script
-        run: Rscript clean_metars.R
-
-      - name: 💾 Commit and push cleaned files
         run: |
+          cd "$GITHUB_WORKSPACE"
+          Rscript clean_metars.R
+
+      - name: 💾 Commit and push updated files
+        run: |
+          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory $PWD
+          git config --global --add safe.directory "$PWD"
 
-          git add clean_metars*.csv clean_log.txt || true
+          # Stage any outputs from either script
+          git add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
           git status
           git diff --cached --stat
 
           if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git commit -m "Fetch & Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             git push
           else
             echo "No changes to commit."
