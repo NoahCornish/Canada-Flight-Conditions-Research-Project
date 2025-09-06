@@ -2,7 +2,7 @@ name: ⛅ METAR ⛈️
 
 on:
   schedule:
-    - cron: "0,30 * * * *"   # run at the top and bottom of every hour
+    - cron: "0,30 * * * *"   # run at :00 and :30
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,7 @@ jobs:
 
     defaults:
       run:
+        # Force all run steps into the repo directory
         working-directory: ${{ github.workspace }}
 
     steps:
@@ -32,6 +33,18 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
+
+      - name: 🔍 Sanity check workspace
+        run: |
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          pwd
+          ls -la
+          # Confirm we are inside a git repo
+          if [ ! -d ".git" ]; then
+            echo "::error::No .git directory found in $PWD"
+            exit 1
+          fi
+          git rev-parse --is-inside-work-tree
 
       - name: 📦 Ensure required R packages are installed
         run: |
@@ -47,17 +60,21 @@ jobs:
 
       - name: 💾 Commit and push updated files
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$PWD"
+          # Configure git scoped to the workspace path and always operate with -C
+          git -C "${GITHUB_WORKSPACE}" config user.name "github-actions[bot]"
+          git -C "${GITHUB_WORKSPACE}" config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C "${GITHUB_WORKSPACE}" config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-          git add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
-          git status
-          git diff --cached --stat
+          # Stage outputs from both scripts (ignore if patterns don't match)
+          git -C "${GITHUB_WORKSPACE}" add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
 
-          if [ -n "$(git status --porcelain)" ]; then
-            git commit -m "Fetch & Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git push
+          # Helpful diagnostics
+          git -C "${GITHUB_WORKSPACE}" status
+          git -C "${GITHUB_WORKSPACE}" diff --cached --stat
+
+          if [ -n "$(git -C "${GITHUB_WORKSPACE}" status --porcelain)" ]; then
+            git -C "${GITHUB_WORKSPACE}" commit -m "Fetch & Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git -C "${GITHUB_WORKSPACE}" push
           else
             echo "No changes to commit."
           fi
