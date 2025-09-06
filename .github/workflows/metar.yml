@@ -1,4 +1,4 @@
-name: METAR Fetch & Clean
+name: ⛅ METAR
 
 on:
   schedule:
