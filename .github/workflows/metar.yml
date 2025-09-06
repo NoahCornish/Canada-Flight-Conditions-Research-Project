@@ -18,8 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rocker/tidyverse:4.3.3
+
     env:
       CHECKWX_API_KEY: ${{ secrets.CHECKWX_API_KEY }}
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
 
     steps:
       - name: 🛎️ Checkout repository
@@ -28,31 +33,24 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: 🔧 Ensure required R packages are installed
+      - name: 📦 Ensure required R packages are installed
         run: |
-          cd "$GITHUB_WORKSPACE"
           Rscript -e 'need <- c("httr","jsonlite","tibble","dplyr","lubridate","readr");
                       missing <- need[!(need %in% rownames(installed.packages()))];
                       if(length(missing)) install.packages(missing, repos="https://cloud.r-project.org", quiet=TRUE)'
 
       - name: 📝 Run METAR fetch script
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          Rscript metar_fetch.R
+        run: Rscript metar_fetch.R
 
       - name: 🧹 Run cleaning script
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          Rscript clean_metars.R
+        run: Rscript clean_metars.R
 
       - name: 💾 Commit and push updated files
         run: |
-          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory "$PWD"
 
-          # Stage any outputs from either script
           git add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
           git status
           git diff --cached --stat
