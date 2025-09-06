@@ -24,7 +24,6 @@ jobs:
 
     defaults:
       run:
-        # Force all run steps into the repo directory
         working-directory: ${{ github.workspace }}
 
     steps:
@@ -34,17 +33,19 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: 🔐 Trust workspace for Git (fix dubious ownership)
+        run: |
+          # Trust all repos in CI container to avoid "detected dubious ownership"
+          git config --global --add safe.directory '*'
+          # Quick sanity check
+          git rev-parse --is-inside-work-tree
+
       - name: 🔍 Sanity check workspace
         run: |
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           pwd
           ls -la
-          # Confirm we are inside a git repo
-          if [ ! -d ".git" ]; then
-            echo "::error::No .git directory found in $PWD"
-            exit 1
-          fi
-          git rev-parse --is-inside-work-tree
+          test -d .git || (echo "::error::.git not found" && exit 1)
 
       - name: 📦 Ensure required R packages are installed
         run: |
@@ -60,21 +61,19 @@ jobs:
 
       - name: 💾 Commit and push updated files
         run: |
-          # Configure git scoped to the workspace path and always operate with -C
-          git -C "${GITHUB_WORKSPACE}" config user.name "github-actions[bot]"
-          git -C "${GITHUB_WORKSPACE}" config user.email "github-actions[bot]@users.noreply.github.com"
-          git -C "${GITHUB_WORKSPACE}" config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Stage outputs from both scripts (ignore if patterns don't match)
-          git -C "${GITHUB_WORKSPACE}" add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
+          git add all_metars*.csv metar_log.txt clean_metars*.csv clean_log.txt || true
 
-          # Helpful diagnostics
-          git -C "${GITHUB_WORKSPACE}" status
-          git -C "${GITHUB_WORKSPACE}" diff --cached --stat
+          echo "---- git status ----"
+          git status
+          echo "---- git diff --cached --stat ----"
+          git diff --cached --stat || true
 
-          if [ -n "$(git -C "${GITHUB_WORKSPACE}" status --porcelain)" ]; then
-            git -C "${GITHUB_WORKSPACE}" commit -m "Fetch & Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git -C "${GITHUB_WORKSPACE}" push
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "Fetch & Clean METARs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
           else
             echo "No changes to commit."
           fi
