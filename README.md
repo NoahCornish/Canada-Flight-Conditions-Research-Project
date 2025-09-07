@@ -1,97 +1,80 @@
-# 🌤️ Canadian METAR Flight Conditions Research Project
+#  Canada METAR Flight Conditions Research Project
 
-## Overview
-This project automates the **collection, analysis, and visualization of decoded METAR reports** for a **nationwide network of 50 Canadian airports** using the [CheckWX API](https://www.checkwx.com/).  
+##  Overview  
+This project automates the **collection, analysis, and visualization of decoded METAR reports** for a growing network of **50 Canadian airports**, tracked continuously via the GitHub-hosted pipeline. The goal: establish the first comprehensive **national climatology of aviation flight conditions** (VFR, MVFR, IFR, LIFR), supporting research in aviation safety, weather dynamics, and climate variability across Canada.
 
-The long-term goal is to build a **national climatology of aviation flight conditions** by tracking the frequency and duration of **LIFR, IFR, MVFR, and VFR** categories.  
-With METARs collected **every 30 minutes**, this dataset will grow into a valuable resource for studying **aviation safety, weather patterns, regional differences, and long-term climate variability**.
-
----
-
-## Airports Covered
-
-### Ontario Core (15 airports)
-- **Far North / Hudson Bay:** CYER (Fort Severn), CYAT (Attawapiskat), CYMO (Moosonee)  
-- **Northern Hubs:** CYPL (Pickle Lake), CYQT (Thunder Bay), CYAM (Sault Ste. Marie)  
-- **Northeast Corridor:** CYTS (Timmins), CYSB (Sudbury), CYYB (North Bay)  
-- **Eastern Ontario:** CYOW (Ottawa), CYGK (Kingston)  
-- **Southwest Ontario:** CYQG (Windsor), CYVV (Wiarton)  
-- **Greater Toronto Area:** CYYZ (Toronto Pearson)  
-- **Central Ontario:** CYQA (Muskoka)  
-
-### Western Canada
-- CYVR (Vancouver), CYLW (Kelowna), CYXS (Prince George), CYXD (Edmonton City Centre), CYYC (Calgary), CYQR (Regina), CYXE (Saskatoon), CYWG (Winnipeg)
-
-### Northern Canada
-- CYZF (Yellowknife), CYFB (Iqaluit), CYRT (Rankin Inlet), CYRB (Resolute Bay), CYCB (Cambridge Bay), CYXY (Whitehorse), CYDA (Dawson City)
-
-### Quebec & Atlantic Canada
-- CYUL (Montréal–Trudeau), CYQB (Quebec City), CYHU (St-Hubert), CYVO (Val-d’Or), CYJN (St-Jean)  
-- CYHZ (Halifax), CYQY (Sydney), CYQM (Moncton), CYFC (Fredericton), CYYG (Charlottetown), CYYT (St. John’s), CYDF (Deer Lake), CYJT (Stephenville)  
-
-*(Ontario core + additional 35 airports = 50 total for nationwide climatology)*
+This repository demonstrates:
+- **Automated data ingestion** (`metar_fetch.R`, every 10 minutes via GitHub Actions).
+- **Deduplication & cleaning** (`clean_metars.R`) into `clean_metars.csv` (plus monthly archives).
+- **State-of-the-art analysis** (`analysis.R`) of daily averages, flight-category frequencies, and time allocations.
+- **Automated visual outputs** (`charts.R`, `chart_readme.R`) with bar charts and overview maps committed back to GitHub.
+- **Front-end visualizations** (`index.html`, `map.html`) enabling interactive display of flight conditions.
 
 ---
 
-## How It Works
+##  Airport Network Expansion  
+Originally centered on **15 Ontario airports**, the project now spans **50 key Canadian stations** across diverse climatic zones:
 
-### Data Pipeline
-- **Fetch:** `metar_fetch.R` pulls decoded METARs (flight category, temps, dew point, humidity, wind, altimeter, raw text).  
-- **Clean:** `clean_metars.R` deduplicates reports into `clean_metars.csv`.  
-- **Archive:** Master file (`all_metars.csv`) plus monthly archives (`metars_YYYY_MM.csv`).  
-- **Analyze:** `analysis.R` computes daily averages, summaries, and time spent in each flight category.  
-- **Visualize:** `charts.R` generates PNG charts of airport statistics in `charts/`.
+- **Ontario Core** (15 airports): From remote Far North (e.g., CYER, CYMO) to urban hubs (e.g., CYYZ).
+- **Western Canada**: Vancouver, Calgary, Edmonton, and other regional centers.
+- **Northern Canada**: Yellowknife, Iqaluit, Whitehorse, and more.
+- **Quebec & Atlantic**: Montréal, Halifax, St. John’s, and complementary regional airports.
 
-### Outputs
-- `daily_averages.csv` – daily means of temp, dewpoint, humidity, wind  
-- `flight_summary.csv` – counts of VFR/MVFR/IFR/LIFR per airport  
-- `time_daily.csv`, `time_alltime.csv`, `time_overall.csv` – time spent in each flight condition  
-- `charts/*.png` – bar charts of flight categories per airport  
+This network captures a geographically comprehensive snapshot of Canada’s aviation weather variability.
 
 ---
 
-## Automation
-- **Fetch Workflow:** Runs **every 30 minutes** to collect fresh METARs.  
-- **Analysis Workflow:** Runs **daily at 01:30 ET** to update summaries and charts.  
-- **GitHub Actions:** Commits new CSVs and PNGs back into the repo automatically.
+##  Data Pipeline & Analysis Framework
+
+1. **Fetch METARs** via [`metar_fetch.R`], capturing flight-category, temperature, dew point, humidity, wind, altimeter, and raw text.
+2. **Clean** the stream with [`clean_metars.R`], maintaining only significant meteorological changes.
+3. **Archive**:
+   - `all_metars.csv` — full master dataset.
+   - Monthly snapshots `metars_YYYY_MM.csv`.
+4. **Analyze** with [`analysis.R`]:
+   - `daily_averages.csv` — meteorological means per day.
+   - `flight_summary.csv` — total counts of categorical conditions per airport.
+   - `time_daily.csv`, `time_alltime.csv`, `time_overall.csv` — time spent per flight condition.
+5. **Visualize** with:
+   - `charts.R` — airport-level bar charts.
+   - `chart_readme.R` — maps and graphics embedded in documentation.
+6. **Front-End Views**:
+   - `index.html` — card-style interface for selecting and viewing METARs.
+   - `map.html` — dynamic regional map of flight conditions.
+
+All artifacts are generated and committed daily via GitHub Actions, ensuring up-to-date reproducibility.
 
 ---
 
-## Research Scope
-ICAO/FAA flight category thresholds:
-- **LIFR:** ceilings < 500 ft AGL or vis < 1 SM  
-- **IFR:** ceilings 500–1,000 ft AGL or vis 1–3 SM  
-- **MVFR:** ceilings 1,000–3,000 ft AGL or vis 3–5 SM  
-- **VFR:** ceilings > 3,000 ft AGL and vis > 5 SM  
+##  Research Applications  
+Leveraging defined category thresholds (LIFR < 500 ft AGL / < 1 SM, IFR 500–1,000 ft / 1–3 SM, etc.), this dataset supports:
 
-This project allows:
-- Daily and seasonal statistics for each airport  
-- Comparisons between northern, coastal, and urban airports  
-- Identification of fog-prone or IFR-heavy regions  
-- Multi-year climatology for aviation operations across Canada  
+- Daily to seasonal trend analysis across diverse Canadian environments.
+- Cross-provincial comparison of aviation weather patterns.
+- Analysis of fog-prone or instrument-heavy regions.
+- Development of normative **multi-year climatologies** for safety planning and climate research.
 
 ---
 
-## Project Roadmap
-| Timeline         | Goals                                                                 |
-|------------------|----------------------------------------------------------------------|
-| **2–3 months**   | Preliminary national comparisons, short-term anomalies               |
-| **6 months**     | Seasonal tendencies across provinces                                 |
-| **12 months**    | Full annual climatology, strong airport-to-airport comparisons       |
-| **1+ years**     | Multi-year climatology, rare event statistics, aviation safety trends |
+| Timeline       | Research Milestones                                     |
+|----------------|----------------------------------------------------------|
+| 2–3 months     | Station-level comparisons, anomaly detection             |
+| 6 months       | Seasonal climatologies across provincial groups          |
+| 12 months      | Full annual cycle insights and robust inter-airport analysis |
+| Multi-year     | Detection of long-term trends and climate-driven shifts  |
 
 ---
 
-## Future Directions
-- 📊 Interactive dashboards of flight conditions by airport and region  
-- 🗺️ Enhanced maps with wind overlays and trend animations  
-- 📂 Public datasets for aviation and climate researchers  
-- 🤝 Collaboration with training schools, regulators, and climatology researchers  
-- 🌐 Expansion to **all major Canadian airports** with real-time web visualization  
+##  Future Directions
+
+- **Interactive dashboards** for live condition monitoring by airport.
+- **Interpolated condition maps** (e.g., provincial shading).
+- **Data portal** for aviation, climatology, and public use.
+- **Collaborative opportunities** with academics, weather services, and aviation authorities.
 
 ---
 
-## Key Point
-This is a **long-term national research project**.  
-Ontario provided the **testbed**, but now the scope is **all of Canada** with 50 representative airports.  
-Every day of data collected strengthens the climatology for **aviation safety, weather awareness, and long-term research**.
+##  Final Note  
+This repository is more than a data pipeline—it’s a **geographer-led, automated national research platform** for Canadian aviation climatology, combining methodology-driven workflows with modern visualization and analysis tools. It’s ready for academic publication, policy integration, and cross-disciplinary collaboration.
+
+*(See GitHub Actions tabs for automatic run logs and status.)*
