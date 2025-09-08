@@ -2,7 +2,7 @@ name: ⛅ METAR ⛈️
 
 on:
   schedule:
-    - cron: "10,40 * * * *"   # run at :10 and :40 past the hour
+    - cron: "05,30 * * * *"   # run at :05 and :30 past the hour
   workflow_dispatch:
 
 permissions:
