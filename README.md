@@ -1,5 +1,7 @@
 #  Canada METAR Flight Conditions Research Project
 
+[![⛅ METAR ⛈️](https://github.com/NoahCornish/METAR-Study/actions/workflows/metar.yml/badge.svg)](https://github.com/NoahCornish/METAR-Study/actions/workflows/metar.yml)
+
 ##  Overview  
 This project automates the **collection, analysis, and visualization of decoded METAR reports** for a growing network of **50 Canadian airports**, tracked continuously via the GitHub-hosted pipeline. The goal: establish the first comprehensive **national climatology of aviation flight conditions** (VFR, MVFR, IFR, LIFR), supporting research in aviation safety, weather dynamics, and climate variability across Canada.
 
