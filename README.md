@@ -1,4 +1,4 @@
-# Canada METAR Flight Conditions Research Project  
+# Canada Flight Conditions Research Project  
 
 [![⛅ METAR ⛈️](https://github.com/NoahCornish/METAR-Study/actions/workflows/metar.yml/badge.svg)](https://github.com/NoahCornish/METAR-Study/actions/workflows/metar.yml)  
 
