@@ -171,32 +171,20 @@
     const toLocalTime=(utc)=> utc? new Date(utc+(utc.endsWith('Z')?'':'Z')).toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
 
     // CFCRP stations (ICAO => Name)
+    // Optional: static display names for a subset of airports (nice labels when available)
     const stations={
-      CYER:"Fort Severn", CYAT:"Attawapiskat", CYMO:"Moosonee", CYPL:"Pickle Lake",
-      CYQT:"Thunder Bay", CYAM:"Sault Ste. Marie", CYTS:"Timmins", CYSB:"Sudbury",
-      CYYB:"North Bay", CYOW:"Ottawa", CYGK:"Kingston", CYQG:"Windsor",
-      CYVV:"Wiarton/Owen Sound", CYYZ:"Toronto Pearson", CYQA:"Muskoka",
-      CYVR:"Vancouver", CYYJ:"Victoria", CYLW:"Kelowna", CYXS:"Prince George", CYXT:"Terrace", CYQQ:"Comox",
-      CYYC:"Calgary", CYEG:"Edmonton", CYMM:"Fort McMurray", CYQF:"Red Deer",
-      CYXE:"Saskatoon", CYQR:"Regina", CYWG:"Winnipeg", CYBR:"Brandon",
-      CYUL:"Montréal–Trudeau", CYHU:"Montréal St‑Hubert", CYQB:"Québec City", CYVO:"Val‑d’Or",
-      CYUY:"Rouyn‑Noranda", CYZV:"Sept‑Îles", CYBC:"Baie‑Comeau", CYRJ:"Roberval",
-      CYHZ:"Halifax", CYYG:"Charlottetown", CYQM:"Moncton", CYFC:"Fredericton",
-      CYYT:"St. John's", CYQY:"Sydney",
-      CYXY:"Whitehorse", CYZF:"Yellowknife", CYFB:"Iqaluit", CYRT:"Rankin Inlet",
-      CYBK:"Baker Lake", CYRB:"Resolute Bay", CYCO:"Kugluktuk"
+      CYMO:"Moosonee", CYYZ:"Toronto Pearson", CYOW:"Ottawa", CYVR:"Vancouver", CYYC:"Calgary"
+      // Tip: labels are optional now; any ICAO not listed will still render using CSV-provided names
     };
 
     // Province / region mapping
+    // Province / region mapping — you can expand dynamically later with a config file
+    // These are example groupings; any ICAO not listed can still be viewed via Airport Explorer
     const provinceMap={
-      "Ontario":["CYER","CYAT","CYMO","CYPL","CYQT","CYAM","CYTS","CYSB","CYYB","CYOW","CYGK","CYQG","CYVV","CYYZ","CYQA"],
-      "British Columbia":["CYVR","CYYJ","CYLW","CYXS","CYXT","CYQQ"],
-      "Alberta":["CYYC","CYEG","CYMM","CYQF"],
-      "Saskatchewan":["CYXE","CYQR"],
-      "Manitoba":["CYWG","CYBR"],
-      "Québec":["CYUL","CYHU","CYQB","CYVO","CYUY","CYZV","CYBC","CYRJ"],
-      "Atlantic Canada":["CYHZ","CYYG","CYQM","CYFC","CYYT","CYQY"],
-      "Territories":["CYXY","CYZF","CYFB","CYRT","CYBK","CYRB","CYCO"]
+      "Ontario":["CYMO","CYYZ","CYOW"],
+      "British Columbia":["CYVR"],
+      "Alberta":["CYYC"],
+      "Custom (Edit mapping in JS)":[]
     };
 
     const latestByAirport={};
@@ -243,18 +231,33 @@
       },
       complete:(res)=>{
         const raw = res.data || [];
-        const rows = raw.map(normalizeRow).filter(r=> r && r.icao && r.observed_utc && stations[r.icao]);
+        const rows = raw.map(normalizeRow).filter(r=> r && r.icao && r.observed_utc);
         console.log(`Parsed rows: ${raw.length}`);
         console.log(`Usable rows: ${rows.length}`);
+
+        // Build a discovered name map using any CSV-provided airport name fields
+        const NAME_FIELDS = ['airport_name','name','station_name'];
+        const pickName = (row) => { for(const k of NAME_FIELDS){ if(row[k]) return row[k]; } return undefined; };
+        const nameMap = {};
+
+        raw.forEach(row => {
+          const r = normalizeRow(row);
+          if(!r.icao) return;
+          const friendly = pickName(row);
+          if(friendly && !nameMap[r.icao]) nameMap[r.icao] = friendly;
+        });
 
         rows.forEach(r=>{
           const obs = (r.observed_utc||'');
           const t = new Date(obs.endsWith('Z')? obs : obs+"Z");
           if(!latestByAirport[r.icao] || t> new Date(latestByAirport[r.icao].observed_utc)) latestByAirport[r.icao] = { ...r, observed_utc: obs.endsWith('Z')? obs : obs+"Z" };
           if(!globalLatest || t> new Date(globalLatest)) globalLatest = obs.endsWith('Z')? obs : obs+"Z";
+          // attach discovered names
+          if(nameMap[r.icao] && !stations[r.icao]) stations[r.icao] = nameMap[r.icao];
         });
 
-        initUI();
+        // Simple on-page diagnostics
+        const diag = document.crea
         renderNational();
       }
     });
