@@ -101,8 +101,8 @@
       <article class="card">
         <h2>About the Project</h2>
         <p>
-          The <strong>Canada Flight Conditions Research Project (CFCRP)</strong> collects and analyzes hourly METAR data from airports across Canada. 
-          We standardize flight categories (<strong>VFR</strong>, <strong>MVFR</strong>, <strong>IFR</strong>, <strong>LIFR</strong>) and visualize conditions to reveal 
+          The <strong>Canada Flight Conditions Research Project (CFCRP)</strong> collects and analyzes hourly METAR data from airports across Canada.
+          We standardize flight categories (<strong>VFR</strong>, <strong>MVFR</strong>, <strong>IFR</strong>, <strong>LIFR</strong>) and visualize conditions to reveal
           <em>regional</em> and <em>seasonal</em> patterns that matter to pilots, dispatchers, and researchers.
         </p>
         <p>
@@ -168,7 +168,7 @@
     // ---------- Utilities ----------
     const $ = (sel)=>document.querySelector(sel);
     const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
-    const toLocalTime=(utc)=> utc? new Date(utc+ (utc.endsWith('Z')?'':'Z')).toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const toLocalTime=(utc)=> utc? new Date(utc+(utc.endsWith('Z')?'':'Z')).toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
 
     // CFCRP stations (ICAO => Name)
     const stations={
@@ -187,7 +187,7 @@
       CYBK:"Baker Lake", CYRB:"Resolute Bay", CYCO:"Kugluktuk"
     };
 
-    // Province / region mapping (extend anytime)
+    // Province / region mapping
     const provinceMap={
       "Ontario":["CYER","CYAT","CYMO","CYPL","CYQT","CYAM","CYTS","CYSB","CYYB","CYOW","CYGK","CYQG","CYVV","CYYZ","CYQA"],
       "British Columbia":["CYVR","CYYJ","CYLW","CYXS","CYXT","CYQQ"],
@@ -202,17 +202,62 @@
     const latestByAirport={};
     let globalLatest=null;
 
-    // ---------- Data Load ----------
-    Papa.parse("all_metars.csv",{download:true,header:true,complete: (res)=>{
-      const rows=res.data.filter(r=>r && r.icao && r.observed_utc && stations[r.icao]);
-      rows.forEach(r=>{
-        const t=new Date(r.observed_utc);
-        if(!latestByAirport[r.icao] || t> new Date(latestByAirport[r.icao].observed_utc)) latestByAirport[r.icao]=r;
-        if(!globalLatest || t> new Date(globalLatest)) globalLatest=r.observed_utc;
-      });
-      initUI();
-      renderNational();
-    }});
+    // -------- Flexible header aliases (works with clean_metars.csv) --------
+    const FIELD = {
+      icao: ['icao','station','station_id'],
+      observed: ['observed_utc','obs_time','observation_time','time','obs_time_utc'],
+      category: ['flight_category','category','cond','flight_cat'],
+      wind_kts: ['wind_kts','wind_speed_kt','wind_kt'],
+      wind_dir: ['wind_dir_deg','wind_direction_deg','wind_deg'],
+      temp_c: ['temp_c','temperature_c'],
+      dew_c: ['dewpoint_c','dewpoint_celsius','dew_c'],
+      rh: ['rh_percent','relative_humidity','humidity'],
+      alt_hg: ['altimeter_hg','altim_in_hg','altimeter_in_hg'],
+      raw: ['raw_text','metar','raw']
+    };
+    const pick = (row, keys) => { for (const k of keys) if (row[k] !== undefined && row[k] !== '') return row[k]; };
+    const toNum = (v) => v === undefined ? undefined : (isNaN(+v) ? undefined : +v);
+
+    function normalizeRow(row){
+      return {
+        icao: (pick(row, FIELD.icao) || '').trim().toUpperCase(),
+        observed_utc: pick(row, FIELD.observed),
+        flight_category: (pick(row, FIELD.category) || '').toUpperCase(),
+        wind_kts: toNum(pick(row, FIELD.wind_kts)),
+        wind_dir_deg: toNum(pick(row, FIELD.wind_dir)),
+        temp_c: toNum(pick(row, FIELD.temp_c)),
+        dewpoint_c: toNum(pick(row, FIELD.dew_c)),
+        rh_percent: toNum(pick(row, FIELD.rh)),
+        altimeter_hg: toNum(pick(row, FIELD.alt_hg)),
+        raw_text: pick(row, FIELD.raw)
+      };
+    }
+
+    // ---------- Data Load (clean_metars.csv) ----------
+    Papa.parse("./clean_metars.csv",{
+      download:true,
+      header:true,
+      error:(err)=>{
+        console.error("CSV load error:", err);
+        $('#lastUpdated').textContent = "Failed to load data (check path/CORS).";
+      },
+      complete:(res)=>{
+        const raw = res.data || [];
+        const rows = raw.map(normalizeRow).filter(r=> r && r.icao && r.observed_utc && stations[r.icao]);
+        console.log(`Parsed rows: ${raw.length}`);
+        console.log(`Usable rows: ${rows.length}`);
+
+        rows.forEach(r=>{
+          const obs = (r.observed_utc||'');
+          const t = new Date(obs.endsWith('Z')? obs : obs+"Z");
+          if(!latestByAirport[r.icao] || t> new Date(latestByAirport[r.icao].observed_utc)) latestByAirport[r.icao] = { ...r, observed_utc: obs.endsWith('Z')? obs : obs+"Z" };
+          if(!globalLatest || t> new Date(globalLatest)) globalLatest = obs.endsWith('Z')? obs : obs+"Z";
+        });
+
+        initUI();
+        renderNational();
+      }
+    });
 
     // ---------- UI Init ----------
     function initUI(){
@@ -287,7 +332,7 @@
         <div class="meta">
           <span class="badge cat-${r.flight_category||'VFR'}">${r.flight_category||'VFR'}</span>
           <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
-          <span class="badge pill">Wind ${r.wind_dir_deg||'—'}° @ ${r.wind_kts||'—'} kt</span>
+          <span class="badge pill">Wind ${r.wind_dir_deg??'—'}° @ ${r.wind_kts??'—'} kt</span>
         </div>
         <div class="kv">
           <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
@@ -302,7 +347,6 @@
         const wrap=document.createElement('div'); wrap.className='chart-wrap'; wrap.style.marginTop='10px';
         wrap.innerHTML='<canvas height="120"></canvas>';
         card.appendChild(wrap);
-        // Tiny category context chart: last known per‑airport counts (mock from entire latest set)
         const ctx=wrap.querySelector('canvas');
         const totals=categoryTotalsFor(icao);
         new Chart(ctx,{type:'doughnut',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{data:[totals.VFR,totals.MVFR,totals.IFR,totals.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']} ]},options:{plugins:{legend:{position:'bottom'}},cutout:'55%'}});
@@ -311,11 +355,9 @@
     }
 
     function categoryTotalsFor(icao){
-      // For now, just build a single-snapshot total using "latest" (acts as 0/1 per cat for the airport) and add a light fallback
       const t={VFR:0,MVFR:0,IFR:0,LIFR:0};
       const r=latestByAirport[icao];
       if(r && r.flight_category && t[r.flight_category]!==undefined) t[r.flight_category]++;
-      // Give small base so the donut is visible even with single value
       const base=0.2; Object.keys(t).forEach(k=>t[k]+=base);
       return t;
     }
@@ -343,7 +385,7 @@
         </div>
         <div class="meta">
           <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
-          <span class="badge pill">${r.wind_dir_deg||'—'}° @ ${r.wind_kts||'—'} kt</span>
+          <span class="badge pill">${r.wind_dir_deg??'—'}° @ ${r.wind_kts??'—'} kt</span>
         </div>
         <div class="kv">
           <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
@@ -360,7 +402,7 @@
       const counts={VFR:0,MVFR:0,IFR:0,LIFR:0};
       Object.values(latestByAirport).forEach(r=>{ if(r && counts[r.flight_category]!==undefined) counts[r.flight_category]++; });
       const ctx=document.getElementById('nationalBreakdown');
-      new Chart(ctx,{type:'bar',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{label:'Latest reports',data:[counts.VFR,counts.MVFR,counts.IFR,counts.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}});
+      new Chart(ctx,{type:'bar',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{label:'Latest reports',data:[counts.VFR,counts.MVFR,counts.IFR,counts.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,precision:0}}});
     }
   </script>
 </body>
