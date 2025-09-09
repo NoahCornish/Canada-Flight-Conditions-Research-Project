@@ -222,7 +222,57 @@
     }
 
     // ---------- Data Load (clean_metars.csv) ----------
-    Papa.parse("./clean_metars.csv",{
+    // Allow ?csv= override for debugging / alternate paths
+    const urlParams = new URLSearchParams(location.search);
+    const CSV_PATH = urlParams.get('csv') || './clean_metars.csv';
+
+    // Basic environment checks + diagnostics panel
+    const diagBox = document.createElement('div');
+    diagBox.className = 'note';
+    diagBox.style.marginTop = '.5rem';
+    diagBox.id = 'diagBox';
+    document.querySelector('.about .card').appendChild(diagBox);
+    function logDiag(msg){
+      console.log('[CFCRP]', msg);
+      const p=document.createElement('div'); p.textContent=msg; diagBox.appendChild(p);
+    }
+    if (location.protocol === 'file:') {
+      logDiag('This page is being opened from a local file:// URL. The browser will not show local files in Network, and CSV loading may be blocked. Serve via GitHub Pages or a local server.');
+    }
+    logDiag(`CSV path resolved to: ${CSV_PATH}`);
+
+    // Try a HEAD request to confirm the CSV exists and avoid silent failures
+    fetch(CSV_PATH, { method: 'HEAD', cache: 'no-store' })
+      .then(resp => {
+        logDiag(`HEAD ${CSV_PATH} → ${resp.status}`);
+        if (!resp.ok) throw new Error(`CSV not found (${resp.status}). Check path or use ?csv=relative/path.csv`);
+        // Proceed with Papa download parse
+        startPapaDownload(CSV_PATH);
+      })
+      .catch(err => {
+        logDiag(`CSV HEAD check failed: ${err.message}`);
+        // Fallback: try fetching full text then parse (works on same-origin)
+        fetch(CSV_PATH, { cache: 'no-store' })
+          .then(r => { if(!r.ok) throw new Error(`Fetch failed (${r.status})`); return r.text(); })
+          .then(text => { logDiag('Fetched CSV via GET fallback. Parsing text…'); startPapaFromText(text); })
+          .catch(e2 => { logDiag(`CSV fetch fallback failed: ${e2.message}`); $('#lastUpdated').textContent = 'Failed to load data (check path/CORS).'; });
+      });
+
+    function startPapaDownload(path){
+      logDiag('Starting Papa.parse download…');
+      Papa.parse(path,{
+        download:true,
+        header:true,
+        error:(err)=>{ console.error('CSV load error:', err); logDiag(`Papa download error: ${err}`); $('#lastUpdated').textContent = 'Failed to load data (check path/CORS).'; },
+        complete:(res)=> processCsv(res.data || [], res.data)
+      });
+    }
+
+    function startPapaFromText(text){
+      Papa.parse(text,{ header:true, complete:(res)=> processCsv(res.data || [], res.data) });
+    }
+
+    function processCsv(raw, rawAll){
       download:true,
       header:true,
       error:(err)=>{
@@ -257,7 +307,12 @@
         });
 
         // Simple on-page diagnostics
-        const diag = document.crea
+        const uniqueIcaos = Object.keys(latestByAirport).length;
+        logDiag(`Parsed rows: ${rawAll?.length ?? raw.length}`);
+        logDiag(`Usable rows: ${rows.length}`);
+        logDiag(`Airports detected: ${uniqueIcaos}`);
+
+        initUI();
         renderNational();
       }
     });
@@ -269,10 +324,10 @@
       $('#year').textContent = new Date().getFullYear();
 
       // Populate airport selects
-      const mkOpt=(icao)=>{const o=document.createElement('option');o.value=icao;o.textContent=`${icao} — ${stations[icao]}`;return o};
+      const mkOpt=(icao)=>{const o=document.createElement('option');const label = stations[icao] ? `${icao} — ${stations[icao]}` : icao; o.value=icao; o.textContent=label; return o};
       const sel1=$('#airportSelect'); const sel2=$('#airportSelect2');
       sel1.innerHTML=''; sel2.innerHTML='';
-      Object.keys(stations).sort().forEach(icao=>{ sel1.appendChild(mkOpt(icao)); sel2.appendChild(mkOpt(icao)); });
+      Object.keys(latestByAirport).sort().forEach(icao=>{ sel1.appendChild(mkOpt(icao)); sel2.appendChild(mkOpt(icao)); });
       $('#viewAirport').addEventListener('click',()=>{ $('#tab-airport').click(); $('#airportSelect2').value = $('#airportSelect').value; showAirport($('#airportSelect').value); });
 
       // Province select
@@ -318,10 +373,14 @@
       const grid=$('#airportDetail');
       grid.innerHTML='';
       const term=(q||'').trim().toLowerCase();
-      const list=Object.keys(stations).filter(k=>{
-        if(!latestByAirport[k]) return false;
-        return !term || k.toLowerCase().includes(term) || stations[k].toLowerCase().includes(term);
-      }).slice(0,12); // keep it snappy
+      const list=Object.keys(latestByAirport).filter(k=>{
+        const label = stations[k] || k;
+        return !term || k.toLowerCase().includes(term) || label.toLowerCase().includes(term);
+      }).slice(0,24);
+      if(list.length===1){ showAirport(list[0]); return; }
+      if(!term) { showAirport($('#airportSelect2').value); return; }
+      list.forEach(icao=> grid.appendChild(renderAirportCard(icao, latestByAirport[icao], false)) );
+    }).slice(0,12); // keep it snappy
       if(list.length===1){ showAirport(list[0]); return; }
       if(!term) { showAirport($('#airportSelect2').value); return; }
       list.forEach(icao=> grid.appendChild(renderAirportCard(icao, latestByAirport[icao], false)) );
@@ -368,7 +427,10 @@
     // ---------- Regional Overview ----------
     function showRegion(province){
       const grid=$('#regionGrid'); grid.innerHTML='';
-      const list=provinceMap[province]||[];
+      let list = provinceMap[province]||[];
+      if(list.length===0){ // fallback: show all known airports if mapping empty
+        list = Object.keys(latestByAirport).sort();
+      }
       list.forEach(icao=>{
         const r=latestByAirport[icao];
         grid.appendChild(renderAirportTile(icao,r));
