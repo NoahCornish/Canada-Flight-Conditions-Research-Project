@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CFCRP • Canada Flight Conditions Research Project</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#f4f6f9; --card:#ffffff; --ink:#233545; --muted:#607288; --brand:#1a73e8; --brand2:#2ecc71;
+      --shadow:0 8px 24px rgba(0,0,0,.08);
+      /* CFCRP colours */
+      --vfr:#2ecc71; --mvfr:#3498db; --ifr:#e74c3c; --lifr:#8e44ad;
+      --chip:#eef2f7;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+
+    /* Header */
+    header{position:sticky;top:0;z-index:50;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow)}
+    .wrap{max-width:1200px;margin:0 auto;padding:1.25rem 1rem;display:flex;gap:1rem;align-items:center;justify-content:space-between}
+    .branding{display:flex;gap:.9rem;align-items:center}
+    .logo{width:42px;height:42px;border-radius:12px;background:#fff1;border:1px solid #ffffff44;display:grid;place-items:center;font-weight:800}
+    .title{line-height:1}
+    .title h1{margin:0;font-size:1.25rem;font-weight:800}
+    .title p{margin:.25rem 0 0;opacity:.92;font-weight:600;font-size:.9rem}
+
+    /* Nav tabs */
+    nav{display:flex;gap:.5rem}
+    .tab{appearance:none;border:none;background:#fff;color:var(--brand);font-weight:700;padding:.55rem .9rem;border-radius:10px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:.18s}
+    .tab[aria-selected="true"]{background:#0b2540;color:#fff}
+
+    main{max-width:1200px;margin:1.25rem auto;padding:0 1rem 2rem;display:grid;gap:1rem}
+
+    /* Intro / About */
+    .about{display:grid;grid-template-columns:1.2fr .8fr;gap:1rem}
+    .card{background:var(--card);border-radius:18px;padding:1.1rem 1.2rem;box-shadow:var(--shadow)}
+    .about h2{margin:.2rem 0 .6rem}
+    .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}
+    .chip{background:var(--chip);color:var(--muted);font-weight:700;border-radius:999px;padding:.3rem .6rem;font-size:.8rem}
+    .legend{display:flex;gap:.5rem;flex-wrap:wrap}
+    .swatch{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .55rem;border-radius:999px;background:#f6f8fb;color:#333;font-weight:700;font-size:.8rem}
+    .box{width:.9rem;height:.9rem;border-radius:3px}
+
+    /* Views */
+    .views{display:grid;gap:1rem}
+
+    /* Controls */
+    .controls{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+    .controls select,.controls input{padding:.65rem .8rem;border:1px solid #d5dbe3;border-radius:12px;background:#fff;font:inherit;min-width:220px}
+    .note{color:var(--muted);font-size:.9rem}
+
+    /* Airport card */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+    .airport{padding:1rem}
+    .icao{font-weight:800;font-size:1.2rem}
+    .name{color:var(--muted);font-weight:600}
+    .meta{display:flex;gap:.6rem;flex-wrap:wrap;margin:.5rem 0}
+    .badge{padding:.15rem .5rem;border-radius:999px;color:#fff;font-weight:800;font-size:.78rem;letter-spacing:.4px}
+    .cat-VFR{background:var(--vfr)} .cat-MVFR{background:var(--mvfr)} .cat-IFR{background:var(--ifr)} .cat-LIFR{background:var(--lifr)}
+    .pill{background:#eef7ff;color:#0b2540;border:1px solid #cfe2ff}
+    .kv{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem}
+    .kv .k{color:var(--muted);font-weight:700}
+
+    .last{font-weight:700;color:#0b2540;margin:.25rem 0 .75rem}
+
+    /* Charts */
+    .chart-wrap{background:#fbfdff;border:1px dashed #cfe2ff;border-radius:14px;padding:10px}
+
+    /* Footer */
+    footer{padding:2rem 1rem;color:var(--muted);text-align:center}
+
+    @media (max-width:900px){
+      .about{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="branding">
+        <div class="logo">✈️</div>
+        <div class="title">
+          <h1>CFCRP — Canada Flight Conditions Research Project</h1>
+          <p>Hourly METAR ingestion • Standardized VFR/MVFR/IFR/LIFR visuals • Regional trend analysis</p>
+        </div>
+      </div>
+      <nav>
+        <button class="tab" id="tab-airport" aria-selected="true">Airport Explorer</button>
+        <button class="tab" id="tab-region" aria-selected="false">Regional Overview</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ABOUT / PROJECT SIGNIFICANCE -->
+    <section class="about">
+      <article class="card">
+        <h2>About the Project</h2>
+        <p>
+          The <strong>Canada Flight Conditions Research Project (CFCRP)</strong> collects and analyzes hourly METAR data from airports across Canada. 
+          We standardize flight categories (<strong>VFR</strong>, <strong>MVFR</strong>, <strong>IFR</strong>, <strong>LIFR</strong>) and visualize conditions to reveal 
+          <em>regional</em> and <em>seasonal</em> patterns that matter to pilots, dispatchers, and researchers.
+        </p>
+        <p>
+          Why it matters: aviation weather drives operational safety and planning. A clean, Canada‑wide view helps identify hotspots, understand diurnal/seasonal shifts, and track trends over time.
+        </p>
+        <div class="legend" aria-label="CFCRP Legend">
+          <span class="swatch"><span class="box" style="background:var(--vfr)"></span>VFR</span>
+          <span class="swatch"><span class="box" style="background:var(--mvfr)"></span>MVFR</span>
+          <span class="swatch"><span class="box" style="background:var(--ifr)"></span>IFR</span>
+          <span class="swatch"><span class="box" style="background:var(--lifr)"></span>LIFR</span>
+        </div>
+        <div class="chips">
+          <span class="chip">Automated hourly pipeline</span>
+          <span class="chip">Clean CSV outputs</span>
+          <span class="chip">Charts & dashboards</span>
+          <span class="chip">Open methods</span>
+        </div>
+      </article>
+      <aside class="card">
+        <h2>Status & Data</h2>
+        <p class="note">Latest dataset timestamp: <span id="lastUpdated">—</span></p>
+        <div class="controls" style="margin-top:.5rem">
+          <label for="airportSelect" class="note">Quick jump to airport:</label>
+          <select id="airportSelect"><option disabled selected>Loading…</option></select>
+          <button class="tab" id="viewAirport">Open in Explorer</button>
+        </div>
+        <div class="chart-wrap" style="margin-top:1rem">
+          <canvas id="nationalBreakdown" height="110"></canvas>
+        </div>
+        <p class="note" style="margin-top:.5rem">National breakdown: share of latest reports by category.</p>
+      </aside>
+    </section>
+
+    <!-- VIEWS -->
+    <section class="views">
+      <!-- Airport Explorer View -->
+      <div id="view-airport" class="card" role="region" aria-labelledby="tab-airport">
+        <h2>Airport Explorer</h2>
+        <div class="controls" style="margin:.5rem 0 1rem">
+          <select id="airportSelect2"><option disabled selected>Select an airport…</option></select>
+          <input id="search" type="search" placeholder="Search by name or ICAO…" />
+        </div>
+        <div id="airportDetail" class="grid"></div>
+      </div>
+
+      <!-- Regional Overview View -->
+      <div id="view-region" class="card" role="region" aria-labelledby="tab-region" style="display:none">
+        <h2>Regional Overview</h2>
+        <div class="controls" style="margin:.5rem 0 1rem">
+          <select id="provinceSelect"><option disabled selected>Select a province/territory…</option></select>
+          <span class="note">Shows the <strong>latest</strong> conditions for all airports in the selected region.</span>
+        </div>
+        <div id="regionGrid" class="grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    CFCRP © <span id="year"></span> · Built with open data (METAR) · Standard colours: VFR (green), MVFR (blue), IFR (red), LIFR (purple)
+  </footer>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (sel)=>document.querySelector(sel);
+    const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
+    const toLocalTime=(utc)=> utc? new Date(utc+ (utc.endsWith('Z')?'':'Z')).toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+
+    // CFCRP stations (ICAO => Name)
+    const stations={
+      CYER:"Fort Severn", CYAT:"Attawapiskat", CYMO:"Moosonee", CYPL:"Pickle Lake",
+      CYQT:"Thunder Bay", CYAM:"Sault Ste. Marie", CYTS:"Timmins", CYSB:"Sudbury",
+      CYYB:"North Bay", CYOW:"Ottawa", CYGK:"Kingston", CYQG:"Windsor",
+      CYVV:"Wiarton/Owen Sound", CYYZ:"Toronto Pearson", CYQA:"Muskoka",
+      CYVR:"Vancouver", CYYJ:"Victoria", CYLW:"Kelowna", CYXS:"Prince George", CYXT:"Terrace", CYQQ:"Comox",
+      CYYC:"Calgary", CYEG:"Edmonton", CYMM:"Fort McMurray", CYQF:"Red Deer",
+      CYXE:"Saskatoon", CYQR:"Regina", CYWG:"Winnipeg", CYBR:"Brandon",
+      CYUL:"Montréal–Trudeau", CYHU:"Montréal St‑Hubert", CYQB:"Québec City", CYVO:"Val‑d’Or",
+      CYUY:"Rouyn‑Noranda", CYZV:"Sept‑Îles", CYBC:"Baie‑Comeau", CYRJ:"Roberval",
+      CYHZ:"Halifax", CYYG:"Charlottetown", CYQM:"Moncton", CYFC:"Fredericton",
+      CYYT:"St. John's", CYQY:"Sydney",
+      CYXY:"Whitehorse", CYZF:"Yellowknife", CYFB:"Iqaluit", CYRT:"Rankin Inlet",
+      CYBK:"Baker Lake", CYRB:"Resolute Bay", CYCO:"Kugluktuk"
+    };
+
+    // Province / region mapping (extend anytime)
+    const provinceMap={
+      "Ontario":["CYER","CYAT","CYMO","CYPL","CYQT","CYAM","CYTS","CYSB","CYYB","CYOW","CYGK","CYQG","CYVV","CYYZ","CYQA"],
+      "British Columbia":["CYVR","CYYJ","CYLW","CYXS","CYXT","CYQQ"],
+      "Alberta":["CYYC","CYEG","CYMM","CYQF"],
+      "Saskatchewan":["CYXE","CYQR"],
+      "Manitoba":["CYWG","CYBR"],
+      "Québec":["CYUL","CYHU","CYQB","CYVO","CYUY","CYZV","CYBC","CYRJ"],
+      "Atlantic Canada":["CYHZ","CYYG","CYQM","CYFC","CYYT","CYQY"],
+      "Territories":["CYXY","CYZF","CYFB","CYRT","CYBK","CYRB","CYCO"]
+    };
+
+    const latestByAirport={};
+    let globalLatest=null;
+
+    // ---------- Data Load ----------
+    Papa.parse("all_metars.csv",{download:true,header:true,complete: (res)=>{
+      const rows=res.data.filter(r=>r && r.icao && r.observed_utc && stations[r.icao]);
+      rows.forEach(r=>{
+        const t=new Date(r.observed_utc);
+        if(!latestByAirport[r.icao] || t> new Date(latestByAirport[r.icao].observed_utc)) latestByAirport[r.icao]=r;
+        if(!globalLatest || t> new Date(globalLatest)) globalLatest=r.observed_utc;
+      });
+      initUI();
+      renderNational();
+    }});
+
+    // ---------- UI Init ----------
+    function initUI(){
+      // Last updated & year
+      $('#lastUpdated').textContent = globalLatest? toLocalTime(globalLatest): '—';
+      $('#year').textContent = new Date().getFullYear();
+
+      // Populate airport selects
+      const mkOpt=(icao)=>{const o=document.createElement('option');o.value=icao;o.textContent=`${icao} — ${stations[icao]}`;return o};
+      const sel1=$('#airportSelect'); const sel2=$('#airportSelect2');
+      sel1.innerHTML=''; sel2.innerHTML='';
+      Object.keys(stations).sort().forEach(icao=>{ sel1.appendChild(mkOpt(icao)); sel2.appendChild(mkOpt(icao)); });
+      $('#viewAirport').addEventListener('click',()=>{ $('#tab-airport').click(); $('#airportSelect2').value = $('#airportSelect').value; showAirport($('#airportSelect').value); });
+
+      // Province select
+      const psel=$('#provinceSelect'); psel.innerHTML='';
+      Object.keys(provinceMap).forEach(p=>{const o=document.createElement('option'); o.value=p; o.textContent=p; psel.appendChild(o);});
+
+      // Tab switching
+      $('#tab-airport').addEventListener('click',()=>setView('airport'));
+      $('#tab-region').addEventListener('click',()=>setView('region'));
+
+      // Handlers
+      $('#airportSelect2').addEventListener('change', e=>showAirport(e.target.value));
+      $('#search').addEventListener('input', (e)=> filterAirports(e.target.value));
+      $('#provinceSelect').addEventListener('change', (e)=> showRegion(e.target.value));
+
+      // Defaults
+      $('#airportSelect2').value='CYMO'; // Moosonee default
+      showAirport('CYMO');
+      $('#provinceSelect').value='Ontario';
+      showRegion('Ontario');
+    }
+
+    // ---------- View Switch ----------
+    function setView(which){
+      const isAirport = which==='airport';
+      $('#view-airport').style.display = isAirport? 'block':'none';
+      $('#view-region').style.display = isAirport? 'none':'block';
+      $('#tab-airport').setAttribute('aria-selected', isAirport);
+      $('#tab-region').setAttribute('aria-selected', !isAirport);
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // ---------- Airport Explorer ----------
+    function showAirport(icao){
+      const r= latestByAirport[icao];
+      const grid=$('#airportDetail');
+      grid.innerHTML='';
+      if(!r){ grid.innerHTML='<p class="note">No data available for this station yet.</p>'; return; }
+      grid.appendChild(renderAirportCard(icao,r,true));
+    }
+
+    function filterAirports(q){
+      const grid=$('#airportDetail');
+      grid.innerHTML='';
+      const term=(q||'').trim().toLowerCase();
+      const list=Object.keys(stations).filter(k=>{
+        if(!latestByAirport[k]) return false;
+        return !term || k.toLowerCase().includes(term) || stations[k].toLowerCase().includes(term);
+      }).slice(0,12); // keep it snappy
+      if(list.length===1){ showAirport(list[0]); return; }
+      if(!term) { showAirport($('#airportSelect2').value); return; }
+      list.forEach(icao=> grid.appendChild(renderAirportCard(icao, latestByAirport[icao], false)) );
+    }
+
+    function renderAirportCard(icao, r, withChart){
+      const card=document.createElement('div'); card.className='airport card';
+      card.innerHTML=`
+        <div class="icao">${icao}</div>
+        <div class="name">${stations[icao]||''}</div>
+        <div class="meta">
+          <span class="badge cat-${r.flight_category||'VFR'}">${r.flight_category||'VFR'}</span>
+          <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
+          <span class="badge pill">Wind ${r.wind_dir_deg||'—'}° @ ${r.wind_kts||'—'} kt</span>
+        </div>
+        <div class="kv">
+          <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
+          <div><div class="k">Dewpoint</div><div>${r.dewpoint_c??'—'} °C</div></div>
+          <div><div class="k">Humidity</div><div>${r.rh_percent??'—'}%</div></div>
+          <div><div class="k">Altimeter</div><div>${r.altimeter_hg??'—'} inHg</div></div>
+        </div>
+        <div class="last">Raw METAR</div>
+        <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;background:#f6f8fb;border-left:4px solid var(--brand);padding:.6rem;border-radius:10px">${(r.raw_text||'').replaceAll('<','&lt;')}</div>
+      `;
+      if(withChart){
+        const wrap=document.createElement('div'); wrap.className='chart-wrap'; wrap.style.marginTop='10px';
+        wrap.innerHTML='<canvas height="120"></canvas>';
+        card.appendChild(wrap);
+        // Tiny category context chart: last known per‑airport counts (mock from entire latest set)
+        const ctx=wrap.querySelector('canvas');
+        const totals=categoryTotalsFor(icao);
+        new Chart(ctx,{type:'doughnut',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{data:[totals.VFR,totals.MVFR,totals.IFR,totals.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']} ]},options:{plugins:{legend:{position:'bottom'}},cutout:'55%'}});
+      }
+      return card;
+    }
+
+    function categoryTotalsFor(icao){
+      // For now, just build a single-snapshot total using "latest" (acts as 0/1 per cat for the airport) and add a light fallback
+      const t={VFR:0,MVFR:0,IFR:0,LIFR:0};
+      const r=latestByAirport[icao];
+      if(r && r.flight_category && t[r.flight_category]!==undefined) t[r.flight_category]++;
+      // Give small base so the donut is visible even with single value
+      const base=0.2; Object.keys(t).forEach(k=>t[k]+=base);
+      return t;
+    }
+
+    // ---------- Regional Overview ----------
+    function showRegion(province){
+      const grid=$('#regionGrid'); grid.innerHTML='';
+      const list=provinceMap[province]||[];
+      list.forEach(icao=>{
+        const r=latestByAirport[icao];
+        grid.appendChild(renderAirportTile(icao,r));
+      });
+    }
+
+    function renderAirportTile(icao,r){
+      const card=document.createElement('div'); card.className='airport card';
+      if(!r){ card.innerHTML=`<div class="icao">${icao}</div><div class="name">${stations[icao]||''}</div><p class="note">No data yet</p>`; return card; }
+      card.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
+          <div>
+            <div class="icao">${icao}</div>
+            <div class="name">${stations[icao]||''}</div>
+          </div>
+          <span class="badge cat-${r.flight_category}">${r.flight_category}</span>
+        </div>
+        <div class="meta">
+          <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
+          <span class="badge pill">${r.wind_dir_deg||'—'}° @ ${r.wind_kts||'—'} kt</span>
+        </div>
+        <div class="kv">
+          <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
+          <div><div class="k">Dewpt</div><div>${r.dewpoint_c??'—'} °C</div></div>
+          <div><div class="k">RH</div><div>${r.rh_percent??'—'}%</div></div>
+          <div><div class="k">Alt</div><div>${r.altimeter_hg??'—'} inHg</div></div>
+        </div>
+      `;
+      return card;
+    }
+
+    // ---------- National Breakdown ----------
+    function renderNational(){
+      const counts={VFR:0,MVFR:0,IFR:0,LIFR:0};
+      Object.values(latestByAirport).forEach(r=>{ if(r && counts[r.flight_category]!==undefined) counts[r.flight_category]++; });
+      const ctx=document.getElementById('nationalBreakdown');
+      new Chart(ctx,{type:'bar',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{label:'Latest reports',data:[counts.VFR,counts.MVFR,counts.IFR,counts.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}});
+    }
+  </script>
+</body>
+</html>
