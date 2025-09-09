@@ -4,14 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CFCRP • Canada Flight Conditions Research Project</title>
+
+  <!-- Fonts & libs -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
     :root{
       --bg:#f4f6f9; --card:#ffffff; --ink:#233545; --muted:#607288; --brand:#1a73e8; --brand2:#2ecc71;
       --shadow:0 8px 24px rgba(0,0,0,.08);
-      /* CFCRP colours */
       --vfr:#2ecc71; --mvfr:#3498db; --ifr:#e74c3c; --lifr:#8e44ad;
       --chip:#eef2f7;
     }
@@ -19,7 +21,6 @@
     html,body{height:100%}
     body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 
-    /* Header */
     header{position:sticky;top:0;z-index:50;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow)}
     .wrap{max-width:1200px;margin:0 auto;padding:1.25rem 1rem;display:flex;gap:1rem;align-items:center;justify-content:space-between}
     .branding{display:flex;gap:.9rem;align-items:center}
@@ -28,32 +29,26 @@
     .title h1{margin:0;font-size:1.25rem;font-weight:800}
     .title p{margin:.25rem 0 0;opacity:.92;font-weight:600;font-size:.9rem}
 
-    /* Nav tabs */
     nav{display:flex;gap:.5rem}
     .tab{appearance:none;border:none;background:#fff;color:var(--brand);font-weight:700;padding:.55rem .9rem;border-radius:10px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:.18s}
     .tab[aria-selected="true"]{background:#0b2540;color:#fff}
 
     main{max-width:1200px;margin:1.25rem auto;padding:0 1rem 2rem;display:grid;gap:1rem}
 
-    /* Intro / About */
     .about{display:grid;grid-template-columns:1.2fr .8fr;gap:1rem}
     .card{background:var(--card);border-radius:18px;padding:1.1rem 1.2rem;box-shadow:var(--shadow)}
     .about h2{margin:.2rem 0 .6rem}
     .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem}
     .chip{background:var(--chip);color:var(--muted);font-weight:700;border-radius:999px;padding:.3rem .6rem;font-size:.8rem}
-    .legend{display:flex;gap:.5rem;flex-wrap:wrap}
+    .legend{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
     .swatch{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .55rem;border-radius:999px;background:#f6f8fb;color:#333;font-weight:700;font-size:.8rem}
     .box{width:.9rem;height:.9rem;border-radius:3px}
 
-    /* Views */
     .views{display:grid;gap:1rem}
-
-    /* Controls */
     .controls{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
     .controls select,.controls input{padding:.65rem .8rem;border:1px solid #d5dbe3;border-radius:12px;background:#fff;font:inherit;min-width:220px}
     .note{color:var(--muted);font-size:.9rem}
 
-    /* Airport card */
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
     .airport{padding:1rem}
     .icao{font-weight:800;font-size:1.2rem}
@@ -64,18 +59,11 @@
     .pill{background:#eef7ff;color:#0b2540;border:1px solid #cfe2ff}
     .kv{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.4rem}
     .kv .k{color:var(--muted);font-weight:700}
-
     .last{font-weight:700;color:#0b2540;margin:.25rem 0 .75rem}
-
-    /* Charts */
     .chart-wrap{background:#fbfdff;border:1px dashed #cfe2ff;border-radius:14px;padding:10px}
-
-    /* Footer */
     footer{padding:2rem 1rem;color:var(--muted);text-align:center}
 
-    @media (max-width:900px){
-      .about{grid-template-columns:1fr}
-    }
+    @media (max-width:900px){ .about{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -96,7 +84,7 @@
   </header>
 
   <main>
-    <!-- ABOUT / PROJECT SIGNIFICANCE -->
+    <!-- ABOUT -->
     <section class="about">
       <article class="card">
         <h2>About the Project</h2>
@@ -106,7 +94,7 @@
           <em>regional</em> and <em>seasonal</em> patterns that matter to pilots, dispatchers, and researchers.
         </p>
         <p>
-          Why it matters: aviation weather drives operational safety and planning. A clean, Canada‑wide view helps identify hotspots, understand diurnal/seasonal shifts, and track trends over time.
+          Why it matters: aviation weather drives operational safety and planning. A clean, Canada-wide view helps identify hotspots, understand diurnal/seasonal shifts, and track trends over time.
         </p>
         <div class="legend" aria-label="CFCRP Legend">
           <span class="swatch"><span class="box" style="background:var(--vfr)"></span>VFR</span>
@@ -120,6 +108,7 @@
           <span class="chip">Charts & dashboards</span>
           <span class="chip">Open methods</span>
         </div>
+        <div id="diagBox" class="note" style="margin-top:.6rem"></div>
       </article>
       <aside class="card">
         <h2>Status & Data</h2>
@@ -138,7 +127,7 @@
 
     <!-- VIEWS -->
     <section class="views">
-      <!-- Airport Explorer View -->
+      <!-- Airport Explorer -->
       <div id="view-airport" class="card" role="region" aria-labelledby="tab-airport">
         <h2>Airport Explorer</h2>
         <div class="controls" style="margin:.5rem 0 1rem">
@@ -148,7 +137,7 @@
         <div id="airportDetail" class="grid"></div>
       </div>
 
-      <!-- Regional Overview View -->
+      <!-- Regional Overview -->
       <div id="view-region" class="card" role="region" aria-labelledby="tab-region" style="display:none">
         <h2>Regional Overview</h2>
         <div class="controls" style="margin:.5rem 0 1rem">
@@ -161,313 +150,366 @@
   </main>
 
   <footer>
-    CFCRP © <span id="year"></span> · Built with open data (METAR) · Standard colours: VFR (green), MVFR (blue), IFR (red), LIFR (purple)
+    CFCRP © <span id="year"></span> · Built with open data (METAR) · Colours: VFR (green), MVFR (blue), IFR (red), LIFR (purple)
   </footer>
 
   <script>
     // ---------- Utilities ----------
-    const $ = (sel)=>document.querySelector(sel);
-    const $$ = (sel)=>Array.from(document.querySelectorAll(sel));
-    const toLocalTime=(utc)=> utc? new Date(utc+(utc.endsWith('Z')?'':'Z')).toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    function $(sel){ return document.querySelector(sel); }
+    function $all(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+    function toLocalTime(utc){
+      if(!utc) return '';
+      var str = utc;
+      if (str.charAt(str.length-1) !== 'Z') str += 'Z';
+      var d = new Date(str);
+      try {
+        return d.toLocaleString('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      } catch(e) {
+        return d.toLocaleString();
+      }
+    }
+    function logDiag(msg){
+      console.log('[CFCRP]', msg);
+      var box = $('#diagBox');
+      if(box){
+        var p = document.createElement('div');
+        p.textContent = msg;
+        box.appendChild(p);
+      }
+    }
 
-    // CFCRP stations (ICAO => Name)
-    // Optional: static display names for a subset of airports (nice labels when available)
-    const stations={
-      CYMO:"Moosonee", CYYZ:"Toronto Pearson", CYOW:"Ottawa", CYVR:"Vancouver", CYYC:"Calgary"
-      // Tip: labels are optional now; any ICAO not listed will still render using CSV-provided names
+    // Friendly station names map (will be augmented from CSV if possible)
+    var stations = {}; // ICAO -> name (we'll fill from CSV if field exists)
+
+    // Province / region mapping (edit as you wish). Unknown ICAOs still appear in Airport Explorer.
+    var provinceMap = {
+      "Ontario": [],
+      "British Columbia": [],
+      "Alberta": [],
+      "Saskatchewan": [],
+      "Manitoba": [],
+      "Québec": [],
+      "Atlantic Canada": [],
+      "Territories": [],
+      "All Airports (fallback)": []  // fallback option that shows everything
     };
 
-    // Province / region mapping
-    // Province / region mapping — you can expand dynamically later with a config file
-    // These are example groupings; any ICAO not listed can still be viewed via Airport Explorer
-    const provinceMap={
-      "Ontario":["CYMO","CYYZ","CYOW"],
-      "British Columbia":["CYVR"],
-      "Alberta":["CYYC"],
-      "Custom (Edit mapping in JS)":[]
+    var latestByAirport = {}; // ICAO -> latest row
+    var globalLatest = null;
+
+    // Header alias map (tolerant to different exporters)
+    var FIELD = {
+      icao:       ['icao','station','station_id'],
+      observed:   ['observed_utc','obs_time','observation_time','time','obs_time_utc'],
+      category:   ['flight_category','category','cond','flight_cat'],
+      wind_kts:   ['wind_kts','wind_speed_kt','wind_kt'],
+      wind_dir:   ['wind_dir_deg','wind_direction_deg','wind_deg'],
+      temp_c:     ['temp_c','temperature_c','temp_celsius'],
+      dew_c:      ['dewpoint_c','dewpoint_celsius','dew_c'],
+      rh:         ['rh_percent','relative_humidity','humidity'],
+      alt_hg:     ['altimeter_hg','altim_in_hg','altimeter_in_hg'],
+      raw:        ['raw_text','metar','raw'],
+      name:       ['airport_name','name','station_name']
     };
-
-    const latestByAirport={};
-    let globalLatest=null;
-
-    // -------- Flexible header aliases (works with clean_metars.csv) --------
-    const FIELD = {
-      icao: ['icao','station','station_id'],
-      observed: ['observed_utc','obs_time','observation_time','time','obs_time_utc'],
-      category: ['flight_category','category','cond','flight_cat'],
-      wind_kts: ['wind_kts','wind_speed_kt','wind_kt'],
-      wind_dir: ['wind_dir_deg','wind_direction_deg','wind_deg'],
-      temp_c: ['temp_c','temperature_c'],
-      dew_c: ['dewpoint_c','dewpoint_celsius','dew_c'],
-      rh: ['rh_percent','relative_humidity','humidity'],
-      alt_hg: ['altimeter_hg','altim_in_hg','altimeter_in_hg'],
-      raw: ['raw_text','metar','raw']
-    };
-    const pick = (row, keys) => { for (const k of keys) if (row[k] !== undefined && row[k] !== '') return row[k]; };
-    const toNum = (v) => v === undefined ? undefined : (isNaN(+v) ? undefined : +v);
-
+    function pick(row, keys){
+      for(var i=0;i<keys.length;i++){
+        var k = keys[i];
+        if (row.hasOwnProperty(k) && row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+      }
+      return undefined;
+    }
+    function toNum(v){
+      if(v === undefined || v === null || v === '') return undefined;
+      var n = +v;
+      return isNaN(n) ? undefined : n;
+    }
     function normalizeRow(row){
-      return {
-        icao: (pick(row, FIELD.icao) || '').trim().toUpperCase(),
-        observed_utc: pick(row, FIELD.observed),
-        flight_category: (pick(row, FIELD.category) || '').toUpperCase(),
+      var icao = pick(row, FIELD.icao); icao = icao ? String(icao).trim().toUpperCase() : '';
+      var observed = pick(row, FIELD.observed) || '';
+      var cat = pick(row, FIELD.category); cat = cat ? String(cat).toUpperCase() : '';
+      var s = {
+        icao: icao,
+        observed_utc: observed,
+        flight_category: cat,
         wind_kts: toNum(pick(row, FIELD.wind_kts)),
         wind_dir_deg: toNum(pick(row, FIELD.wind_dir)),
         temp_c: toNum(pick(row, FIELD.temp_c)),
         dewpoint_c: toNum(pick(row, FIELD.dew_c)),
         rh_percent: toNum(pick(row, FIELD.rh)),
         altimeter_hg: toNum(pick(row, FIELD.alt_hg)),
-        raw_text: pick(row, FIELD.raw)
+        raw_text: pick(row, FIELD.raw) || ''
       };
+      var friendly = pick(row, FIELD.name);
+      if(icao && friendly && !stations[icao]) stations[icao] = friendly;
+      return s;
     }
 
-    // ---------- Data Load (clean_metars.csv) ----------
-    // Allow ?csv= override for debugging / alternate paths
-    const urlParams = new URLSearchParams(location.search);
-    const CSV_PATH = urlParams.get('csv') || './clean_metars.csv';
+    // -------- Data Load (clean_metars.csv or ?csv=...) --------
+    var urlParams = new URLSearchParams(location.search);
+    var CSV_PATH = urlParams.get('csv') || './clean_metars.csv';
+    $('#year').textContent = new Date().getFullYear();
 
-    // Basic environment checks + diagnostics panel
-    const diagBox = document.createElement('div');
-    diagBox.className = 'note';
-    diagBox.style.marginTop = '.5rem';
-    diagBox.id = 'diagBox';
-    document.querySelector('.about .card').appendChild(diagBox);
-    function logDiag(msg){
-      console.log('[CFCRP]', msg);
-      const p=document.createElement('div'); p.textContent=msg; diagBox.appendChild(p);
-    }
     if (location.protocol === 'file:') {
-      logDiag('This page is being opened from a local file:// URL. The browser will not show local files in Network, and CSV loading may be blocked. Serve via GitHub Pages or a local server.');
+      logDiag('⚠️ Opened via file:// — many browsers block XHR here. Use a local server or GitHub Pages.');
     }
-    logDiag(`CSV path resolved to: ${CSV_PATH}`);
+    logDiag('CSV path resolved to: ' + CSV_PATH);
 
-    // Try a HEAD request to confirm the CSV exists and avoid silent failures
+    // Try a HEAD to see if it exists; fallback to GET text; then Papa.parse
     fetch(CSV_PATH, { method: 'HEAD', cache: 'no-store' })
-      .then(resp => {
-        logDiag(`HEAD ${CSV_PATH} → ${resp.status}`);
-        if (!resp.ok) throw new Error(`CSV not found (${resp.status}). Check path or use ?csv=relative/path.csv`);
-        // Proceed with Papa download parse
+      .then(function(resp){
+        logDiag('HEAD ' + CSV_PATH + ' → ' + resp.status);
+        if(!resp.ok) throw new Error('CSV not found (' + resp.status + ')');
         startPapaDownload(CSV_PATH);
       })
-      .catch(err => {
-        logDiag(`CSV HEAD check failed: ${err.message}`);
-        // Fallback: try fetching full text then parse (works on same-origin)
+      .catch(function(){
+        logDiag('HEAD failed; attempting GET fallback…');
         fetch(CSV_PATH, { cache: 'no-store' })
-          .then(r => { if(!r.ok) throw new Error(`Fetch failed (${r.status})`); return r.text(); })
-          .then(text => { logDiag('Fetched CSV via GET fallback. Parsing text…'); startPapaFromText(text); })
-          .catch(e2 => { logDiag(`CSV fetch fallback failed: ${e2.message}`); $('#lastUpdated').textContent = 'Failed to load data (check path/CORS).'; });
+          .then(function(r){ if(!r.ok) throw new Error('GET failed ('+r.status+')'); return r.text(); })
+          .then(function(txt){ logDiag('Fetched CSV via GET fallback. Parsing…'); startPapaFromText(txt); })
+          .catch(function(e2){ logDiag('❌ CSV fetch failed: ' + e2.message); $('#lastUpdated').textContent='Failed to load data (check path/CORS).'; });
       });
 
     function startPapaDownload(path){
       logDiag('Starting Papa.parse download…');
-      Papa.parse(path,{
-        download:true,
-        header:true,
-        error:(err)=>{ console.error('CSV load error:', err); logDiag(`Papa download error: ${err}`); $('#lastUpdated').textContent = 'Failed to load data (check path/CORS).'; },
-        complete:(res)=> processCsv(res.data || [], res.data)
+      Papa.parse(path, {
+        download: true,
+        header: true,
+        error: function(err){ console.error('CSV load error:', err); logDiag('Papa download error: ' + err); $('#lastUpdated').textContent='Failed to load data.'; },
+        complete: function(res){ processCsv(res.data || [], res.data); }
       });
     }
-
     function startPapaFromText(text){
-      Papa.parse(text,{ header:true, complete:(res)=> processCsv(res.data || [], res.data) });
+      Papa.parse(text, { header:true, complete: function(res){ processCsv(res.data || [], res.data); } });
     }
 
     function processCsv(raw, rawAll){
-      download:true,
-      header:true,
-      error:(err)=>{
-        console.error("CSV load error:", err);
-        $('#lastUpdated').textContent = "Failed to load data (check path/CORS).";
-      },
-      complete:(res)=>{
-        const raw = res.data || [];
-        const rows = raw.map(normalizeRow).filter(r=> r && r.icao && r.observed_utc);
-        console.log(`Parsed rows: ${raw.length}`);
-        console.log(`Usable rows: ${rows.length}`);
-
-        // Build a discovered name map using any CSV-provided airport name fields
-        const NAME_FIELDS = ['airport_name','name','station_name'];
-        const pickName = (row) => { for(const k of NAME_FIELDS){ if(row[k]) return row[k]; } return undefined; };
-        const nameMap = {};
-
-        raw.forEach(row => {
-          const r = normalizeRow(row);
-          if(!r.icao) return;
-          const friendly = pickName(row);
-          if(friendly && !nameMap[r.icao]) nameMap[r.icao] = friendly;
-        });
-
-        rows.forEach(r=>{
-          const obs = (r.observed_utc||'');
-          const t = new Date(obs.endsWith('Z')? obs : obs+"Z");
-          if(!latestByAirport[r.icao] || t> new Date(latestByAirport[r.icao].observed_utc)) latestByAirport[r.icao] = { ...r, observed_utc: obs.endsWith('Z')? obs : obs+"Z" };
-          if(!globalLatest || t> new Date(globalLatest)) globalLatest = obs.endsWith('Z')? obs : obs+"Z";
-          // attach discovered names
-          if(nameMap[r.icao] && !stations[r.icao]) stations[r.icao] = nameMap[r.icao];
-        });
-
-        // Simple on-page diagnostics
-        const uniqueIcaos = Object.keys(latestByAirport).length;
-        logDiag(`Parsed rows: ${rawAll?.length ?? raw.length}`);
-        logDiag(`Usable rows: ${rows.length}`);
-        logDiag(`Airports detected: ${uniqueIcaos}`);
-
-        initUI();
-        renderNational();
+      // Normalize and keep only rows with ICAO + observed time
+      var rows = [];
+      for (var i=0;i<raw.length;i++){
+        var norm = normalizeRow(raw[i]);
+        if (norm.icao && norm.observed_utc) rows.push(norm);
       }
-    });
 
-    // ---------- UI Init ----------
-    function initUI(){
-      // Last updated & year
-      $('#lastUpdated').textContent = globalLatest? toLocalTime(globalLatest): '—';
-      $('#year').textContent = new Date().getFullYear();
+      // Build latest map and global latest
+      for (var j=0;j<rows.length;j++){
+        var r = rows[j];
+        var obs = r.observed_utc || '';
+        var iso = obs.charAt(obs.length-1)==='Z' ? obs : obs + 'Z';
+        var t = new Date(iso);
+        var prev = latestByAirport[r.icao];
+        if(!prev || t > new Date(prev.observed_utc)){
+          r.observed_utc = iso;
+          latestByAirport[r.icao] = r;
+        }
+        if(!globalLatest || t > new Date(globalLatest)) globalLatest = iso;
+      }
 
-      // Populate airport selects
-      const mkOpt=(icao)=>{const o=document.createElement('option');const label = stations[icao] ? `${icao} — ${stations[icao]}` : icao; o.value=icao; o.textContent=label; return o};
-      const sel1=$('#airportSelect'); const sel2=$('#airportSelect2');
-      sel1.innerHTML=''; sel2.innerHTML='';
-      Object.keys(latestByAirport).sort().forEach(icao=>{ sel1.appendChild(mkOpt(icao)); sel2.appendChild(mkOpt(icao)); });
-      $('#viewAirport').addEventListener('click',()=>{ $('#tab-airport').click(); $('#airportSelect2').value = $('#airportSelect').value; showAirport($('#airportSelect').value); });
+      // On-page diagnostics
+      var uniqueIcaos = Object.keys(latestByAirport).length;
+      logDiag('Parsed rows: ' + (rawAll && rawAll.length ? rawAll.length : raw.length));
+      logDiag('Usable rows: ' + rows.length);
+      logDiag('Airports detected: ' + uniqueIcaos);
 
-      // Province select
-      const psel=$('#provinceSelect'); psel.innerHTML='';
-      Object.keys(provinceMap).forEach(p=>{const o=document.createElement('option'); o.value=p; o.textContent=p; psel.appendChild(o);});
-
-      // Tab switching
-      $('#tab-airport').addEventListener('click',()=>setView('airport'));
-      $('#tab-region').addEventListener('click',()=>setView('region'));
-
-      // Handlers
-      $('#airportSelect2').addEventListener('change', e=>showAirport(e.target.value));
-      $('#search').addEventListener('input', (e)=> filterAirports(e.target.value));
-      $('#provinceSelect').addEventListener('change', (e)=> showRegion(e.target.value));
-
-      // Defaults
-      $('#airportSelect2').value='CYMO'; // Moosonee default
-      showAirport('CYMO');
-      $('#provinceSelect').value='Ontario';
-      showRegion('Ontario');
+      // Initialize UI now that we have data
+      initUI();
+      renderNational();
     }
 
-    // ---------- View Switch ----------
+    // ---------- UI ----------
+    function initUI(){
+      $('#lastUpdated').textContent = globalLatest ? toLocalTime(globalLatest) : '—';
+      if(!globalLatest){
+        logDiag('No data found. Ensure the CSV exists at ' + CSV_PATH + ' (same origin) or pass ?csv=relative/path.csv');
+      }
+
+      // Populate selects from actually detected airports
+      var icaos = Object.keys(latestByAirport).sort();
+      var sel1 = $('#airportSelect'), sel2 = $('#airportSelect2');
+      sel1.innerHTML = ''; sel2.innerHTML = '';
+      for (var i=0;i<icaos.length;i++){
+        var icao = icaos[i];
+        var label = stations[icao] ? (icao + ' — ' + stations[icao]) : icao;
+        var o1 = document.createElement('option'); o1.value=icao; o1.textContent=label; sel1.appendChild(o1);
+        var o2 = document.createElement('option'); o2.value=icao; o2.textContent=label; sel2.appendChild(o2);
+      }
+      $('#viewAirport').addEventListener('click', function(){
+        $('#tab-airport').click();
+        var v = $('#airportSelect').value;
+        if (v){ $('#airportSelect2').value = v; showAirport(v); }
+      });
+
+      // Province select: try to auto-group some common airports by first two letters after C? (Not reliable in Canada)
+      // We keep manual buckets; also provide a fallback that shows "All Airports".
+      var psel = $('#provinceSelect'); psel.innerHTML='';
+      var provinces = Object.keys(provinceMap);
+      for (var p=0;p<provinces.length;p++){
+        var pv = provinces[p];
+        var op = document.createElement('option'); op.value=pv; op.textContent=pv; psel.appendChild(op);
+      }
+      // Fill fallback bucket with *all* detected airports
+      provinceMap["All Airports (fallback)"] = icaos.slice(0);
+
+      // Tab switching
+      $('#tab-airport').addEventListener('click', function(){ setView('airport'); });
+      $('#tab-region').addEventListener('click', function(){ setView('region'); });
+
+      // Handlers
+      $('#airportSelect2').addEventListener('change', function(e){ showAirport(e.target.value); });
+      $('#search').addEventListener('input', function(e){ filterAirports(e.target.value); });
+      $('#provinceSelect').addEventListener('change', function(e){ showRegion(e.target.value); });
+
+      // Defaults
+      if (icaos.indexOf('CYMO') >= 0) $('#airportSelect2').value='CYMO';
+      showAirport($('#airportSelect2').value || icaos[0]);
+      $('#provinceSelect').value='All Airports (fallback)';
+      showRegion('All Airports (fallback)');
+
+      $('#year').textContent = new Date().getFullYear();
+    }
+
     function setView(which){
-      const isAirport = which==='airport';
+      var isAirport = which==='airport';
       $('#view-airport').style.display = isAirport? 'block':'none';
       $('#view-region').style.display = isAirport? 'none':'block';
-      $('#tab-airport').setAttribute('aria-selected', isAirport);
-      $('#tab-region').setAttribute('aria-selected', !isAirport);
+      $('#tab-airport').setAttribute('aria-selected', isAirport ? 'true' : 'false');
+      $('#tab-region').setAttribute('aria-selected', isAirport ? 'false' : 'true');
       window.scrollTo({top:0,behavior:'smooth'});
     }
 
     // ---------- Airport Explorer ----------
     function showAirport(icao){
-      const r= latestByAirport[icao];
-      const grid=$('#airportDetail');
-      grid.innerHTML='';
-      if(!r){ grid.innerHTML='<p class="note">No data available for this station yet.</p>'; return; }
-      grid.appendChild(renderAirportCard(icao,r,true));
+      var r = latestByAirport[icao];
+      var grid = $('#airportDetail');
+      grid.innerHTML = '';
+      if(!r){ grid.innerHTML = '<p class="note">No data available for this station yet.</p>'; return; }
+      grid.appendChild(renderAirportCard(icao, r, true));
     }
 
     function filterAirports(q){
-      const grid=$('#airportDetail');
-      grid.innerHTML='';
-      const term=(q||'').trim().toLowerCase();
-      const list=Object.keys(latestByAirport).filter(k=>{
-        const label = stations[k] || k;
-        return !term || k.toLowerCase().includes(term) || label.toLowerCase().includes(term);
-      }).slice(0,24);
+      var grid = $('#airportDetail');
+      grid.innerHTML = '';
+      var term = (q || '').toLowerCase();
+      var list = [];
+      var all = Object.keys(latestByAirport);
+      for (var i=0;i<all.length;i++){
+        var icao = all[i];
+        var label = stations[icao] ? stations[icao].toLowerCase() : '';
+        if (!term || icao.toLowerCase().indexOf(term) >= 0 || label.indexOf(term) >= 0){
+          list.push(icao);
+        }
+      }
+      list = list.slice(0,24);
       if(list.length===1){ showAirport(list[0]); return; }
-      if(!term) { showAirport($('#airportSelect2').value); return; }
-      list.forEach(icao=> grid.appendChild(renderAirportCard(icao, latestByAirport[icao], false)) );
-    }).slice(0,12); // keep it snappy
-      if(list.length===1){ showAirport(list[0]); return; }
-      if(!term) { showAirport($('#airportSelect2').value); return; }
-      list.forEach(icao=> grid.appendChild(renderAirportCard(icao, latestByAirport[icao], false)) );
+      if(!term){ showAirport($('#airportSelect2').value); return; }
+      for (var j=0;j<list.length;j++){
+        var ic = list[j];
+        grid.appendChild(renderAirportCard(ic, latestByAirport[ic], false));
+      }
     }
 
     function renderAirportCard(icao, r, withChart){
-      const card=document.createElement('div'); card.className='airport card';
-      card.innerHTML=`
-        <div class="icao">${icao}</div>
-        <div class="name">${stations[icao]||''}</div>
-        <div class="meta">
-          <span class="badge cat-${r.flight_category||'VFR'}">${r.flight_category||'VFR'}</span>
-          <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
-          <span class="badge pill">Wind ${r.wind_dir_deg??'—'}° @ ${r.wind_kts??'—'} kt</span>
-        </div>
-        <div class="kv">
-          <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
-          <div><div class="k">Dewpoint</div><div>${r.dewpoint_c??'—'} °C</div></div>
-          <div><div class="k">Humidity</div><div>${r.rh_percent??'—'}%</div></div>
-          <div><div class="k">Altimeter</div><div>${r.altimeter_hg??'—'} inHg</div></div>
-        </div>
-        <div class="last">Raw METAR</div>
-        <div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;background:#f6f8fb;border-left:4px solid var(--brand);padding:.6rem;border-radius:10px">${(r.raw_text||'').replaceAll('<','&lt;')}</div>
-      `;
+      var card = document.createElement('div'); card.className='airport card';
+      card.innerHTML =
+        '<div class="icao">' + icao + '</div>' +
+        '<div class="name">' + (stations[icao] || '') + '</div>' +
+        '<div class="meta">' +
+          '<span class="badge cat-' + (r.flight_category || 'VFR') + '">' + (r.flight_category || 'VFR') + '</span>' +
+          '<span class="badge pill">' + toLocalTime(r.observed_utc) + '</span>' +
+          '<span class="badge pill">Wind ' + (r.wind_dir_deg!=null?r.wind_dir_deg:'—') + '° @ ' + (r.wind_kts!=null?r.wind_kts:'—') + ' kt</span>' +
+        '</div>' +
+        '<div class="kv">' +
+          '<div><div class="k">Temp</div><div>' + (r.temp_c!=null?r.temp_c:'—') + ' °C</div></div>' +
+          '<div><div class="k">Dewpoint</div><div>' + (r.dewpoint_c!=null?r.dewpoint_c:'—') + ' °C</div></div>' +
+          '<div><div class="k">Humidity</div><div>' + (r.rh_percent!=null?r.rh_percent:'—') + '%</div></div>' +
+          '<div><div class="k">Altimeter</div><div>' + (r.altimeter_hg!=null?r.altimeter_hg:'—') + ' inHg</div></div>' +
+        '</div>' +
+        '<div class="last">Raw METAR</div>' +
+        '<div style="font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace;background:#f6f8fb;border-left:4px solid var(--brand);padding:.6rem;border-radius:10px">' +
+          String(r.raw_text || '').replace(/</g,'&lt;') +
+        '</div>';
+
       if(withChart){
-        const wrap=document.createElement('div'); wrap.className='chart-wrap'; wrap.style.marginTop='10px';
-        wrap.innerHTML='<canvas height="120"></canvas>';
+        var wrap = document.createElement('div'); wrap.className='chart-wrap'; wrap.style.marginTop='10px';
+        wrap.innerHTML = '<canvas height="120"></canvas>';
         card.appendChild(wrap);
-        const ctx=wrap.querySelector('canvas');
-        const totals=categoryTotalsFor(icao);
-        new Chart(ctx,{type:'doughnut',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{data:[totals.VFR,totals.MVFR,totals.IFR,totals.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']} ]},options:{plugins:{legend:{position:'bottom'}},cutout:'55%'}});
+        var ctx = wrap.querySelector('canvas');
+        var totals = categoryTotalsFor(icao);
+        new Chart(ctx,{
+          type:'doughnut',
+          data:{ labels:['VFR','MVFR','IFR','LIFR'],
+            datasets:[{ data:[totals.VFR,totals.MVFR,totals.IFR,totals.LIFR],
+              backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)'] }] },
+          options:{ plugins:{ legend:{position:'bottom'} }, cutout:'55%' }
+        });
       }
       return card;
     }
 
     function categoryTotalsFor(icao){
-      const t={VFR:0,MVFR:0,IFR:0,LIFR:0};
-      const r=latestByAirport[icao];
-      if(r && r.flight_category && t[r.flight_category]!==undefined) t[r.flight_category]++;
-      const base=0.2; Object.keys(t).forEach(k=>t[k]+=base);
+      var t={VFR:0,MVFR:0,IFR:0,LIFR:0};
+      var r=latestByAirport[icao];
+      if(r && r.flight_category && t.hasOwnProperty(r.flight_category)) t[r.flight_category]++;
+      // small base to keep donut visible with single value
+      var base=0.2; t.VFR+=base; t.MVFR+=base; t.IFR+=base; t.LIFR+=base;
       return t;
     }
 
     // ---------- Regional Overview ----------
     function showRegion(province){
-      const grid=$('#regionGrid'); grid.innerHTML='';
-      let list = provinceMap[province]||[];
-      if(list.length===0){ // fallback: show all known airports if mapping empty
-        list = Object.keys(latestByAirport).sort();
-      }
-      list.forEach(icao=>{
-        const r=latestByAirport[icao];
+      var grid=$('#regionGrid'); grid.innerHTML='';
+      var list = provinceMap[province] || [];
+      // If mapping empty, show all known airports
+      if(!list || list.length===0) list = Object.keys(latestByAirport).sort();
+      for (var i=0;i<list.length;i++){
+        var icao = list[i];
+        var r = latestByAirport[icao];
         grid.appendChild(renderAirportTile(icao,r));
-      });
+      }
     }
 
     function renderAirportTile(icao,r){
-      const card=document.createElement('div'); card.className='airport card';
-      if(!r){ card.innerHTML=`<div class="icao">${icao}</div><div class="name">${stations[icao]||''}</div><p class="note">No data yet</p>`; return card; }
-      card.innerHTML=`
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">
-          <div>
-            <div class="icao">${icao}</div>
-            <div class="name">${stations[icao]||''}</div>
-          </div>
-          <span class="badge cat-${r.flight_category}">${r.flight_category}</span>
-        </div>
-        <div class="meta">
-          <span class="badge pill">${toLocalTime(r.observed_utc)}</span>
-          <span class="badge pill">${r.wind_dir_deg??'—'}° @ ${r.wind_kts??'—'} kt</span>
-        </div>
-        <div class="kv">
-          <div><div class="k">Temp</div><div>${r.temp_c??'—'} °C</div></div>
-          <div><div class="k">Dewpt</div><div>${r.dewpoint_c??'—'} °C</div></div>
-          <div><div class="k">RH</div><div>${r.rh_percent??'—'}%</div></div>
-          <div><div class="k">Alt</div><div>${r.altimeter_hg??'—'} inHg</div></div>
-        </div>
-      `;
+      var card=document.createElement('div'); card.className='airport card';
+      if(!r){
+        card.innerHTML='<div class="icao">'+icao+'</div><div class="name">'+(stations[icao]||'')+'</div><p class="note">No data yet</p>';
+        return card;
+      }
+      card.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem">' +
+          '<div>' +
+            '<div class="icao">'+icao+'</div>' +
+            '<div class="name">'+(stations[icao]||'')+'</div>' +
+          '</div>' +
+          '<span class="badge cat-'+r.flight_category+'">'+r.flight_category+'</span>' +
+        '</div>' +
+        '<div class="meta">' +
+          '<span class="badge pill">'+toLocalTime(r.observed_utc)+'</span>' +
+          '<span class="badge pill">'+(r.wind_dir_deg!=null?r.wind_dir_deg:'—')+'° @ '+(r.wind_kts!=null?r.wind_kts:'—')+' kt</span>' +
+        '</div>' +
+        '<div class="kv">' +
+          '<div><div class="k">Temp</div><div>'+(r.temp_c!=null?r.temp_c:'—')+' °C</div></div>' +
+          '<div><div class="k">Dewpt</div><div>'+(r.dewpoint_c!=null?r.dewpoint_c:'—')+' °C</div></div>' +
+          '<div><div class="k">RH</div><div>'+(r.rh_percent!=null?r.rh_percent:'—')+'%</div></div>' +
+          '<div><div class="k">Alt</div><div>'+(r.altimeter_hg!=null?r.altimeter_hg:'—')+' inHg</div></div>' +
+        '</div>';
       return card;
     }
 
     // ---------- National Breakdown ----------
     function renderNational(){
-      const counts={VFR:0,MVFR:0,IFR:0,LIFR:0};
-      Object.values(latestByAirport).forEach(r=>{ if(r && counts[r.flight_category]!==undefined) counts[r.flight_category]++; });
-      const ctx=document.getElementById('nationalBreakdown');
-      new Chart(ctx,{type:'bar',data:{labels:['VFR','MVFR','IFR','LIFR'],datasets:[{label:'Latest reports',data:[counts.VFR,counts.MVFR,counts.IFR,counts.LIFR],backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,precision:0}}});
+      var counts={VFR:0,MVFR:0,IFR:0,LIFR:0};
+      var vals = Object.values ? Object.values(latestByAirport) : Object.keys(latestByAirport).map(function(k){return latestByAirport[k];});
+      for (var i=0;i<vals.length;i++){
+        var r = vals[i];
+        if(r && counts.hasOwnProperty(r.flight_category)) counts[r.flight_category]++;
+      }
+      var ctx = document.getElementById('nationalBreakdown');
+      new Chart(ctx,{
+        type:'bar',
+        data:{ labels:['VFR','MVFR','IFR','LIFR'],
+          datasets:[{ label:'Latest reports', data:[counts.VFR,counts.MVFR,counts.IFR,counts.LIFR],
+          backgroundColor:['var(--vfr)','var(--mvfr)','var(--ifr)','var(--lifr)'] }] },
+        options:{ plugins:{ legend:{display:false} }, scales:{ y:{ beginAtZero:true, ticks:{precision:0} } } }
+      });
     }
   </script>
 </body>
