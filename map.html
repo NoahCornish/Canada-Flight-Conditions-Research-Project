@@ -99,7 +99,7 @@
     const bounds = L.latLngBounds([]);
 
     // Load cleaned dataset
-    Papa.parse("all_metars.csv", {
+    Papa.parse("clean_metars.csv", {
       download: true,
       header: true,
       complete: function(results) {
