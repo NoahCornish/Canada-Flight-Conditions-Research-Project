@@ -3630,3 +3630,5 @@
 [2025-11-20 09:29:21 UTC] Cleaned all_metars_11_2025.csv → clean_metars_11_2025.csv — before: 21800, after: 21312, removed: 488
 [2025-11-20 10:30:27 UTC] Cleaned all_metars.csv → clean_metars.csv — before: 90315, after: 83460, removed: 6855
 [2025-11-20 10:30:27 UTC] Cleaned all_metars_11_2025.csv → clean_metars_11_2025.csv — before: 21850, after: 21361, removed: 489
+[2025-11-20 11:24:33 UTC] Cleaned all_metars.csv → clean_metars.csv — before: 90365, after: 83510, removed: 6855
+[2025-11-20 11:24:33 UTC] Cleaned all_metars_11_2025.csv → clean_metars_11_2025.csv — before: 21900, after: 21411, removed: 489
