@@ -8606,3 +8606,5 @@
 [2026-03-25 11:01:26 UTC] Cleaned all_metars_03_2026.csv → clean_metars_03_2026.csv — before: 23150, after: 22590, removed: 560
 [2026-03-25 11:53:51 UTC] Cleaned all_metars.csv → clean_metars.csv — before: 214706, after: 203158, removed: 11548
 [2026-03-25 11:53:51 UTC] Cleaned all_metars_03_2026.csv → clean_metars_03_2026.csv — before: 23200, after: 22640, removed: 560
+[2026-03-25 13:45:50 UTC] Cleaned all_metars.csv → clean_metars.csv — before: 214756, after: 203208, removed: 11548
+[2026-03-25 13:45:50 UTC] Cleaned all_metars_03_2026.csv → clean_metars_03_2026.csv — before: 23250, after: 22690, removed: 560
